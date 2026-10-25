@@ -1,10 +1,9 @@
 import { Link } from 'react-router-dom'
 import { useApp } from '../AppContext'
-import { subjects } from '../data/mock'
 import { Card, PageHeader, ProgressBar, SubjectIcon } from '../components/ui'
 
 export default function Subjects() {
-  const { t, tr } = useApp()
+  const { t, tr, subjects } = useApp()
   return (
     <div>
       <PageHeader title={t('subjects')} subtitle={t('continueLearning')} />

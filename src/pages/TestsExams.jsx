@@ -1,16 +1,21 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { CalendarDays, CheckCircle2, XCircle } from 'lucide-react'
+import { CalendarDays, CheckCircle2, Loader2, Sparkles, XCircle } from 'lucide-react'
 import { useApp } from '../AppContext'
-import { exams, mockTest, results, subjectById } from '../data/mock'
+import { mockTest } from '../../shared/catalog'
+import { api } from '../api'
+import { relativeTime } from '../lib/dates'
 import { Card, Modal, PageHeader, ProgressBar, SubjectIcon } from '../components/ui'
 
-function MockTest({ open, onClose }) {
-  const { t, tr } = useApp()
+const builtInTest = { title: { en: 'Algebra Mock Test', kn: 'ಬೀಜಗಣಿತ ಅಣಕು ಪರೀಕ್ಷೆ' }, subject: 'mathematics', questions: mockTest }
+
+function MockTest({ test, onClose }) {
+  const { t, tr, mutate } = useApp()
   const [index, setIndex] = useState(0)
   const [picked, setPicked] = useState(null)
   const [score, setScore] = useState(0)
   const [finished, setFinished] = useState(false)
+  const questions = test?.questions ?? []
 
   const reset = () => {
     setIndex(0)
@@ -20,27 +25,32 @@ function MockTest({ open, onClose }) {
   }
 
   useEffect(() => {
-    if (open) reset()
-  }, [open])
+    if (test) reset()
+  }, [test])
 
-  const q = mockTest[index]
+  if (!test) return null
+  const q = questions[index]
   const next = () => {
     const newScore = score + (picked === q.answer ? 1 : 0)
     setScore(newScore)
     setPicked(null)
-    if (index + 1 < mockTest.length) setIndex(index + 1)
-    else setFinished(true)
+    if (index + 1 < questions.length) setIndex(index + 1)
+    else {
+      setFinished(true)
+      mutate('/tests/attempts', { method: 'POST', body: { subject: test.subject, title: test.title, score: newScore, total: questions.length } }).catch(() => {})
+    }
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={t('mockTest')}>
+    <Modal open onClose={onClose} title={tr(test.title)}>
       {finished ? (
         <div className="py-4 text-center">
-          <div className="text-5xl">{score >= 4 ? '🏆' : score >= 3 ? '👏' : '💪'}</div>
+          <div className="text-5xl">{score / questions.length >= 0.8 ? '🏆' : score / questions.length >= 0.6 ? '👏' : '💪'}</div>
           <p className="mt-3 text-sm text-muted">{t('yourScore')}</p>
           <p className="text-4xl font-bold text-ink">
-            {score} / {mockTest.length}
+            {score} / {questions.length}
           </p>
+          <p className="mt-2 text-xs text-muted">{t('scoreSaved')}</p>
           <div className="mt-6 flex gap-3">
             <button onClick={reset} className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold">
               {t('retry')}
@@ -54,10 +64,10 @@ function MockTest({ open, onClose }) {
         <div>
           <div className="mb-2 flex justify-between text-xs text-muted">
             <span>
-              {t('question')} {index + 1} / {mockTest.length}
+              {t('question')} {index + 1} / {questions.length}
             </span>
           </div>
-          <ProgressBar value={(index / mockTest.length) * 100} />
+          <ProgressBar value={(index / questions.length) * 100} />
           <p className="mb-4 mt-5 text-lg font-semibold text-ink">{tr(q.q)}</p>
           <div className="grid grid-cols-2 gap-3">
             {q.options.map((o, i) => {
@@ -72,14 +82,14 @@ function MockTest({ open, onClose }) {
                     : 'border-slate-200 opacity-60'
               return (
                 <button
-                  key={o}
+                  key={i}
                   disabled={revealed}
                   onClick={() => setPicked(i)}
-                  className={`flex items-center justify-between rounded-xl border-2 px-4 py-3 text-left font-medium ${tone}`}
+                  className={`flex items-center justify-between gap-2 rounded-xl border-2 px-4 py-3 text-left font-medium ${tone}`}
                 >
                   {o}
-                  {revealed && correct && <CheckCircle2 size={18} />}
-                  {revealed && picked === i && !correct && <XCircle size={18} />}
+                  {revealed && correct && <CheckCircle2 size={18} className="shrink-0" />}
+                  {revealed && picked === i && !correct && <XCircle size={18} className="shrink-0" />}
                 </button>
               )
             })}
@@ -89,7 +99,7 @@ function MockTest({ open, onClose }) {
             disabled={picked === null}
             className="mt-5 w-full rounded-xl bg-brand-600 py-2.5 text-sm font-semibold text-white disabled:opacity-40"
           >
-            {index + 1 === mockTest.length ? t('finish') : t('next')}
+            {index + 1 === questions.length ? t('finish') : t('next')}
           </button>
         </div>
       )}
@@ -97,10 +107,55 @@ function MockTest({ open, onClose }) {
   )
 }
 
+function PracticeTestCard({ onReady }) {
+  const { t, tr, subjects, aiEnabled, errorText, showToast } = useApp()
+  const [subject, setSubject] = useState('mathematics')
+  const [busy, setBusy] = useState(false)
+  const generate = async () => {
+    setBusy(true)
+    try {
+      onReady(await api('/ai/practice-test', { method: 'POST', body: { subject } }))
+    } catch (err) {
+      showToast(errorText(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <Card className="mb-6 flex flex-col gap-3 p-5 sm:flex-row sm:items-center">
+      <Sparkles size={22} className="shrink-0 text-violet-600" />
+      <div className="flex-1">
+        <div className="font-semibold text-ink">{t('aiPracticeTest')}</div>
+        <div className="text-sm text-muted">{aiEnabled ? t('aiPracticeTestHint') : t('aiOffNote')}</div>
+      </div>
+      <select
+        value={subject}
+        onChange={(e) => setSubject(e.target.value)}
+        disabled={!aiEnabled}
+        className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-ink"
+      >
+        {subjects.map((s) => (
+          <option key={s.id} value={s.id}>
+            {tr(s.name)}
+          </option>
+        ))}
+      </select>
+      <button
+        onClick={generate}
+        disabled={!aiEnabled || busy}
+        className="flex h-10 items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
+      >
+        {busy && <Loader2 size={16} className="animate-spin" />}
+        {busy ? t('preparing') : t('startTest')}
+      </button>
+    </Card>
+  )
+}
+
 export default function TestsExams() {
-  const { t, tr, lang } = useApp()
+  const { t, tr, data, subjectById } = useApp()
   const [params, setParams] = useSearchParams()
-  const [mockOpen, setMockOpen] = useState(params.get('mock') === '1')
+  const [test, setTest] = useState(params.get('mock') === '1' ? builtInTest : null)
 
   useEffect(() => {
     if (params.get('mock')) setParams({}, { replace: true })
@@ -111,14 +166,16 @@ export default function TestsExams() {
       <PageHeader
         title={t('testsExams')}
         action={
-          <button onClick={() => setMockOpen(true)} className="rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700">
+          <button onClick={() => setTest(builtInTest)} className="rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700">
             {t('takeMockTest')}
           </button>
         }
       />
+      <PracticeTestCard onReady={setTest} />
       <h2 className="mb-3 text-lg font-semibold text-ink">{t('upcomingExams')}</h2>
+      {data.exams.length === 0 && <Card className="mb-6 p-6 text-center text-sm text-muted">{t('noExams')}</Card>}
       <div className="mb-6 grid gap-4 md:grid-cols-3">
-        {exams.map((e) => {
+        {data.exams.map((e) => {
           const s = subjectById[e.subject]
           return (
             <Card key={e.id} className="p-5">
@@ -134,41 +191,66 @@ export default function TestsExams() {
                 </div>
               </div>
               <div className="mt-4 flex items-center gap-2 text-sm text-ink">
-                <CalendarDays size={15} className="text-muted" /> {tr(e.date)}
+                <CalendarDays size={15} className="text-muted" /> {tr(e.dateLabel)}
               </div>
-              <div className="mt-1 text-sm text-muted">
-                {t('syllabus')}: {tr(e.syllabus)}
-              </div>
+              {(e.syllabus.en || e.syllabus.kn) && (
+                <div className="mt-1 text-sm text-muted">
+                  {t('syllabus')}: {tr(e.syllabus)}
+                </div>
+              )}
             </Card>
           )
         })}
       </div>
-      <h2 className="mb-3 text-lg font-semibold text-ink">{t('recentResults')}</h2>
-      <Card className="divide-y divide-slate-100">
-        {results.map((r) => {
-          const s = subjectById[r.subject]
-          const pct = Math.round((r.score / r.max) * 100)
-          return (
-            <div key={r.subject} className="flex items-center gap-4 p-4">
-              <SubjectIcon subject={s} size="sm" />
-              <div className="min-w-0 flex-1">
-                <div className="font-medium text-ink">{tr(s.name)}</div>
-                <div className="text-xs text-muted">{tr(r.name)}</div>
-              </div>
-              <div className="hidden w-40 sm:block">
-                <ProgressBar value={pct} />
-              </div>
-              <div className="w-20 text-right">
+      <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+        <div>
+          <h2 className="mb-3 text-lg font-semibold text-ink">{t('recentResults')}</h2>
+          <Card className="divide-y divide-slate-100">
+            {data.results.length === 0 && <p className="p-6 text-center text-sm text-muted">{t('noMarks')}</p>}
+            {data.results.map((r) => {
+              const s = subjectById[r.subject]
+              const pct = Math.round((r.score / r.max) * 100)
+              return (
+                <div key={r.id} className="flex items-center gap-4 p-4">
+                  <SubjectIcon subject={s} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-ink">{tr(s.name)}</div>
+                    <div className="text-xs text-muted">{tr(r.name)}</div>
+                  </div>
+                  <div className="hidden w-40 sm:block">
+                    <ProgressBar value={pct} />
+                  </div>
+                  <div className="w-20 text-right">
+                    <span className="font-semibold text-ink">
+                      {r.score}/{r.max}
+                    </span>
+                    <span className="block text-xs text-muted">{pct}%</span>
+                  </div>
+                </div>
+              )
+            })}
+          </Card>
+        </div>
+        <div>
+          <h2 className="mb-3 text-lg font-semibold text-ink">{t('myPracticeTests')}</h2>
+          <Card className="divide-y divide-slate-100">
+            {data.attempts.length === 0 && <p className="p-6 text-center text-sm text-muted">{t('noAttempts')}</p>}
+            {data.attempts.slice(0, 8).map((a) => (
+              <div key={a.id} className="flex items-center gap-3 p-4">
+                <SubjectIcon subject={subjectById[a.subject] ?? subjectById.mathematics} size="sm" />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-medium text-ink">{tr(a.title)}</div>
+                  <div className="text-xs text-muted">{tr(relativeTime(a.createdAt))}</div>
+                </div>
                 <span className="font-semibold text-ink">
-                  {r.score}/{r.max}
+                  {a.score}/{a.total}
                 </span>
-                <span className="block text-xs text-muted">{pct}%</span>
               </div>
-            </div>
-          )
-        })}
-      </Card>
-      <MockTest open={mockOpen} onClose={() => setMockOpen(false)} key={lang} />
+            ))}
+          </Card>
+        </div>
+      </div>
+      <MockTest test={test} onClose={() => setTest(null)} />
     </div>
   )
 }

@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useApp } from '../AppContext'
-import { subjectById, timetable, weekSchedule } from '../data/mock'
+import { dateLabel, isoDate } from '../lib/dates'
+import { timetable, weekSchedule } from '../../shared/catalog'
 import { Card, PageHeader } from '../components/ui'
 
 const dayKeys = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -23,18 +25,81 @@ const cellTone = {
   'computer-science': 'bg-violet-50 text-violet-700 border-violet-100',
 }
 
-// October 2024 events, keyed by day of month.
-const events = {
-  10: { en: 'Dasara holidays begin', kn: 'ದಸರಾ ರಜೆ ಆರಂಭ', tone: 'bg-rose-100 text-rose-600' },
-  12: { en: 'English Essay due', kn: 'ಇಂಗ್ಲಿಷ್ ಪ್ರಬಂಧ', tone: 'bg-emerald-100 text-emerald-700' },
-  15: { en: 'SS Project due', kn: 'ಸಮಾಜ ಯೋಜನೆ', tone: 'bg-amber-100 text-amber-700' },
-  19: { en: 'Parent–Teacher Meeting', kn: 'ಪೋಷಕ–ಶಿಕ್ಷಕ ಸಭೆ', tone: 'bg-violet-100 text-violet-700' },
-  25: { en: 'Science Fair registration', kn: 'ವಿಜ್ಞಾನ ಮೇಳ ನೋಂದಣಿ', tone: 'bg-sky-100 text-sky-700' },
-  31: { en: 'Maths Unit Test', kn: 'ಗಣಿತ ಘಟಕ ಪರೀಕ್ಷೆ', tone: 'bg-blue-100 text-blue-700' },
+// Month events come from real homework due dates, exams and dated announcements.
+function useMonthEvents() {
+  const { data, subjectById } = useApp()
+  const events = {}
+  const add = (date, ev) => (events[date] ??= []).push(ev)
+  for (const h of data.homework) add(h.dueDate, { ...h.title, tone: h.done ? 'bg-slate-100 text-slate-500 line-through' : 'bg-emerald-100 text-emerald-700', to: '/homework' })
+  for (const e of data.exams) {
+    const name = subjectById[e.subject]?.name
+    add(e.date, { en: `${name?.en} ${e.name.en}`, kn: `${name?.kn} ${e.name.kn}`, tone: 'bg-blue-100 text-blue-700', to: '/tests' })
+  }
+  for (const a of data.announcements) {
+    if (a.eventDate) add(a.eventDate, { ...a.title, tone: a.category === 'holiday' ? 'bg-rose-100 text-rose-600' : 'bg-violet-100 text-violet-700', to: '/announcements' })
+  }
+  return events
+}
+
+function MonthView() {
+  const { t, tr, lang } = useApp()
+  const events = useMonthEvents()
+  const now = new Date()
+  const [cursor, setCursor] = useState({ y: now.getFullYear(), m: now.getMonth() })
+  const first = new Date(cursor.y, cursor.m, 1)
+  const count = new Date(cursor.y, cursor.m + 1, 0).getDate()
+  const todayIso = isoDate()
+  const move = (n) => setCursor(({ y, m }) => ({ y: m + n < 0 ? y - 1 : m + n > 11 ? y + 1 : y, m: (m + n + 12) % 12 }))
+  const weekdays = Array.from({ length: 7 }, (_, i) => new Date(2024, 8, 1 + i).toLocaleDateString(lang === 'kn' ? 'kn-IN' : 'en-IN', { weekday: 'short' }))
+
+  return (
+    <Card className="p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="font-semibold text-ink">{tr(dateLabel(first, { month: 'long', year: 'numeric' }))}</h2>
+        <div className="flex gap-1">
+          <button onClick={() => move(-1)} className="rounded-lg p-1.5 text-muted hover:bg-slate-100" aria-label={t('previous')}>
+            <ChevronLeft size={18} />
+          </button>
+          <button onClick={() => move(1)} className="rounded-lg p-1.5 text-muted hover:bg-slate-100" aria-label={t('next')}>
+            <ChevronRight size={18} />
+          </button>
+        </div>
+      </div>
+      <div className="grid grid-cols-7 gap-1.5 text-center text-xs font-medium text-muted">
+        {weekdays.map((d) => (
+          <div key={d} className="py-1">
+            {d}
+          </div>
+        ))}
+        {Array.from({ length: first.getDay() }, (_, i) => (
+          <div key={`b${i}`} />
+        ))}
+        {Array.from({ length: count }, (_, i) => {
+          const day = i + 1
+          const date = isoDate(new Date(cursor.y, cursor.m, day))
+          const list = events[date] ?? []
+          return (
+            <div
+              key={day}
+              className={`min-h-[64px] rounded-xl border p-1.5 text-left md:min-h-[86px] ${date === todayIso ? 'border-brand-500 bg-brand-50/50' : 'border-slate-100'}`}
+            >
+              <span className={`text-xs font-semibold ${date === todayIso ? 'text-brand-700' : 'text-ink'}`}>{day}</span>
+              {list.slice(0, 2).map((ev, j) => (
+                <Link key={j} to={ev.to} className={`mt-1 block truncate rounded-md px-1.5 py-1 text-[10px] leading-tight md:text-[11px] ${ev.tone}`} title={tr(ev)}>
+                  {tr(ev)}
+                </Link>
+              ))}
+              {list.length > 2 && <span className="mt-0.5 block text-[10px] text-muted">+{list.length - 2}</span>}
+            </div>
+          )
+        })}
+      </div>
+    </Card>
+  )
 }
 
 export default function SmartCalendar() {
-  const { t, tr } = useApp()
+  const { t, tr, subjectById } = useApp()
   const [view, setView] = useState('week')
   const todayIdx = Math.min(Math.max(new Date().getDay() - 1, 0), 5)
   const [mobileDay, setMobileDay] = useState(dayKeys[todayIdx])
@@ -133,29 +198,7 @@ export default function SmartCalendar() {
           </div>
         </>
       ) : (
-        <Card className="p-4">
-          <h2 className="mb-3 font-semibold text-ink">{tr({ en: 'October 2024', kn: 'ಅಕ್ಟೋಬರ್ 2024' })}</h2>
-          <div className="grid grid-cols-7 gap-1.5 text-center text-xs font-medium text-muted">
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
-              <div key={d} className="py-1">
-                {d}
-              </div>
-            ))}
-            {Array.from({ length: 2 }, (_, i) => (
-              <div key={`b${i}`} />
-            ))}
-            {Array.from({ length: 31 }, (_, i) => {
-              const day = i + 1
-              const ev = events[day]
-              return (
-                <div key={day} className="min-h-[64px] rounded-xl border border-slate-100 p-1.5 text-left md:min-h-[86px]">
-                  <span className="text-xs font-semibold text-ink">{day}</span>
-                  {ev && <span className={`mt-1 block rounded-md px-1.5 py-1 text-[10px] leading-tight md:text-[11px] ${ev.tone}`}>{tr(ev)}</span>}
-                </div>
-              )
-            })}
-          </div>
-        </Card>
+        <MonthView />
       )}
     </div>
   )

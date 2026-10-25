@@ -1,16 +1,33 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Bell, ChevronDown, LogOut, RotateCcw, Search, Settings, UserRound } from 'lucide-react'
+import { Bell, ChevronDown, LogOut, Search, Settings, UserRound } from 'lucide-react'
 import { useApp } from '../AppContext'
-import { student } from '../data/mock'
 import { Logo } from './Logo'
-import { bottomNavItems, navItems } from './nav'
+import { navFor } from './nav'
 import SearchPalette from './SearchPalette'
 import avatar from '../assets/avatar.png'
 import school from '../assets/school.png'
 
-export function Avatar({ className = 'h-11 w-11' }) {
-  return <img src={avatar} alt="Ananya" className={`${className} rounded-full object-cover ring-2 ring-white`} />
+export function Avatar({ className = 'h-11 w-11', user: who }) {
+  const { user: me } = useApp()
+  const user = who ?? me
+  if (user?.avatar === 'ananya') return <img src={avatar} alt={user.name} className={`${className} rounded-full object-cover ring-2 ring-white`} />
+  // Everyone else gets their initials.
+  const initials = (user?.name ?? '?')
+    .replace(/^(Mrs?|Ms|Dr)\.?\s+/i, '')
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
+  return (
+    <span
+      className={`${className} flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-violet-500 text-[0.8em] font-semibold text-white ring-2 ring-white`}
+      aria-label={user?.name}
+    >
+      {initials}
+    </span>
+  )
 }
 
 export function LanguageToggle({ compact }) {
@@ -80,9 +97,9 @@ function NotificationsMenu({ small }) {
           </div>
           {notifications.map((n) => (
             <button
-              key={n.id}
+              key={n.key}
               onClick={() => {
-                markNotificationRead(n.id)
+                markNotificationRead(n.key)
                 setOpen(false)
                 navigate(n.to)
               }}
@@ -103,7 +120,7 @@ function NotificationsMenu({ small }) {
 }
 
 function ProfileMenu() {
-  const { t, tr, resetDemo, showToast } = useApp()
+  const { t, tr, user, logout } = useApp()
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
   useClickOutside(ref, () => setOpen(false))
@@ -112,8 +129,8 @@ function ProfileMenu() {
       <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-3 rounded-2xl py-1 pl-1 pr-2 hover:bg-white/70">
         <Avatar className="h-12 w-12" />
         <div className="text-left leading-tight">
-          <div className="text-[15px] font-semibold text-ink">{student.name}</div>
-          <div className="text-[13px] text-muted">{tr(student.className)}</div>
+          <div className="text-[15px] font-semibold text-ink">{user.name}</div>
+          <div className="text-[13px] text-muted">{user.role === 'teacher' ? t('teacherRole') : tr(user.className)}</div>
         </div>
         <ChevronDown size={18} className="ml-3 text-slate-500" />
       </button>
@@ -127,18 +144,8 @@ function ProfileMenu() {
           </Link>
           <button
             onClick={() => {
-              resetDemo()
               setOpen(false)
-              showToast('Demo data reset')
-            }}
-            className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-ink hover:bg-slate-50"
-          >
-            <RotateCcw size={16} /> Reset demo
-          </button>
-          <button
-            onClick={() => {
-              setOpen(false)
-              showToast(t('demoNote'))
+              logout()
             }}
             className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-rose-500 hover:bg-rose-50"
           >
@@ -151,8 +158,9 @@ function ProfileMenu() {
 }
 
 function Sidebar() {
-  const { t, homework } = useApp()
-  const pendingHomework = homework.filter((h) => !h.done && !h.project).length
+  const { t, homework, user } = useApp()
+  const pendingHomework = homework.filter((h) => !h.done && !h.project && h.due !== 'overdue').length
+  const { navItems } = navFor(user.role)
   return (
     <aside className="sticky top-3 hidden h-[calc(100vh-1.5rem)] w-[236px] shrink-0 flex-col overflow-hidden rounded-3xl bg-white shadow-card lg:flex">
       <div className="px-6 pb-6 pt-5">
@@ -204,12 +212,14 @@ function Sidebar() {
 }
 
 function Topbar({ onSearch }) {
-  const { t } = useApp()
+  const { t, user } = useApp()
+  const student = user.role === 'student'
   return (
     <header className="hidden items-center gap-4 pb-4 lg:flex">
       <button
         onClick={onSearch}
-        className="flex h-[46px] w-full max-w-[530px] items-center gap-3 rounded-xl border border-slate-100 bg-white px-4 text-left text-[14px] text-muted shadow-card hover:border-brand-200"
+        disabled={!student}
+        className="flex h-[46px] w-full max-w-[530px] disabled:invisible items-center gap-3 rounded-xl border border-slate-100 bg-white px-4 text-left text-[14px] text-muted shadow-card hover:border-brand-200"
       >
         <Search size={20} className="text-slate-500" />
         <span className="flex-1 truncate">{t('searchPlaceholder')}</span>
@@ -217,7 +227,7 @@ function Topbar({ onSearch }) {
       </button>
       <div className="ml-auto flex items-center gap-5">
         <LanguageToggle />
-        <NotificationsMenu />
+        {student && <NotificationsMenu />}
         <ProfileMenu />
       </div>
     </header>
@@ -225,17 +235,21 @@ function Topbar({ onSearch }) {
 }
 
 function MobileHeader({ onSearch }) {
+  const { user } = useApp()
+  const student = user.role === 'student'
   return (
     <header className="sticky top-0 z-30 flex items-center gap-2 bg-canvas/90 px-4 pb-2 pt-3 backdrop-blur lg:hidden">
       <Link to="/">
         <Logo compact />
       </Link>
       <div className="ml-auto flex items-center gap-1.5">
-        <button onClick={onSearch} className="flex h-8 w-8 items-center justify-center rounded-full text-ink hover:bg-slate-100" aria-label="Search">
-          <Search size={18} />
-        </button>
+        {student && (
+          <button onClick={onSearch} className="flex h-8 w-8 items-center justify-center rounded-full text-ink hover:bg-slate-100" aria-label="Search">
+            <Search size={18} />
+          </button>
+        )}
         <LanguageToggle compact />
-        <NotificationsMenu small />
+        {student && <NotificationsMenu small />}
         <Link to="/profile">
           <Avatar className="h-8 w-8" />
         </Link>
@@ -245,7 +259,8 @@ function MobileHeader({ onSearch }) {
 }
 
 function BottomNav() {
-  const { t } = useApp()
+  const { t, user } = useApp()
+  const { bottomNavItems } = navFor(user.role)
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-slate-100 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
       {bottomNavItems.map(({ to, key, icon: Icon, end }) => (
@@ -271,10 +286,11 @@ function BottomNav() {
 
 export default function Layout() {
   const [searchOpen, setSearchOpen] = useState(false)
-  const { toast } = useApp()
+  const { toast, user, data } = useApp()
   const location = useLocation()
 
   useEffect(() => {
+    if (user.role !== 'student') return
     const onKey = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
@@ -283,7 +299,7 @@ export default function Layout() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [user.role])
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -300,7 +316,7 @@ export default function Layout() {
         </main>
       </div>
       <BottomNav />
-      <SearchPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
+      {data && <SearchPalette open={searchOpen} onClose={() => setSearchOpen(false)} />}
       {toast && (
         <div className="fixed bottom-20 left-1/2 z-50 -translate-x-1/2 rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-white shadow-xl lg:bottom-8">
           {toast}

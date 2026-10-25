@@ -1,5 +1,7 @@
+import { useState } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useApp } from '../AppContext'
-import { attendanceHistory, attendanceMonth } from '../data/mock'
+import { monthlyHistory, monthView } from '../lib/attendance'
 import { Card, PageHeader } from '../components/ui'
 import { ProgressRing } from '../components/dashboard'
 
@@ -12,24 +14,28 @@ const tone = {
 }
 
 export default function Attendance() {
-  const { t, tr } = useApp()
-  const days = attendanceMonth.days
-  const present = days.filter((d) => d === 'P').length
-  const absent = days.filter((d) => d === 'A').length
-  const holidays = days.filter((d) => d === 'H').length
+  const { t, tr, lang, data } = useApp()
+  const now = new Date()
+  const [cursor, setCursor] = useState({ y: now.getFullYear(), m: now.getMonth() })
+  const isCurrent = cursor.y === now.getFullYear() && cursor.m === now.getMonth()
+  const month = monthView(data.attendance, cursor.y, cursor.m)
+  const history = monthlyHistory(data.attendance)
+  const move = (n) => setCursor(({ y, m }) => ({ y: m + n < 0 ? y - 1 : m + n > 11 ? y + 1 : y, m: (m + n + 12) % 12 }))
   const legend = [
-    { key: 'P', label: t('present'), count: present },
-    { key: 'A', label: t('absent'), count: absent },
-    { key: 'H', label: t('holiday'), count: holidays },
+    { key: 'P', label: t('present'), count: month.present },
+    { key: 'A', label: t('absent'), count: month.absent },
+    { key: 'H', label: t('holiday'), count: month.holidays },
     { key: 'W', label: t('weekend') },
   ]
+  // Sunday-first initials, e.g. S M T W T F S.
+  const weekdays = Array.from({ length: 7 }, (_, i) => new Date(2024, 8, 1 + i).toLocaleDateString(lang === 'kn' ? 'kn-IN' : 'en-IN', { weekday: 'narrow' }))
 
   return (
     <div>
-      <PageHeader title={t('attendance')} subtitle={tr(attendanceMonth.label)} />
+      <PageHeader title={t('attendance')} subtitle={tr(month.label)} />
       <div className="grid gap-4 lg:grid-cols-[1fr_1.6fr]">
         <Card className="flex flex-col items-center p-6">
-          <ProgressRing value={92} size={170} stroke={14} sub={t('thisMonth')} />
+          <ProgressRing value={month.pct ?? 0} label={month.pct === null ? '—' : undefined} size={170} stroke={14} sub={isCurrent ? t('thisMonth') : tr(month.label)} />
           <div className="mt-6 grid w-full grid-cols-3 gap-3 text-center">
             {legend.slice(0, 3).map((l) => (
               <div key={l.key} className="rounded-xl bg-slate-50 p-3">
@@ -41,12 +47,12 @@ export default function Attendance() {
           <div className="mt-6 w-full">
             <h3 className="mb-3 text-sm font-semibold text-ink">{t('monthlyTrend')}</h3>
             <div className="flex h-32 items-end justify-between gap-3">
-              {attendanceHistory.map((m) => (
-                <div key={m.month.en} className="flex flex-1 flex-col items-center gap-1">
-                  <span className="text-[11px] text-muted">{m.pct}%</span>
+              {history.map((m) => (
+                <div key={m.key} className="flex flex-1 flex-col items-center gap-1">
+                  <span className="text-[11px] text-muted">{m.pct === null ? '—' : `${m.pct}%`}</span>
                   <div
                     className="w-full rounded-t-lg bg-gradient-to-t from-emerald-500 to-emerald-300"
-                    style={{ height: `${(m.pct - 70) * 3}px` }}
+                    style={{ height: `${Math.max(((m.pct ?? 70) - 70) * 3, 4)}px` }}
                   />
                   <span className="text-xs text-muted">{tr(m.month)}</span>
                 </div>
@@ -55,17 +61,27 @@ export default function Attendance() {
           </div>
         </Card>
         <Card className="p-5">
-          <h2 className="mb-4 font-semibold text-ink">{tr(attendanceMonth.label)}</h2>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="font-semibold text-ink">{tr(month.label)}</h2>
+            <div className="flex gap-1">
+              <button onClick={() => move(-1)} className="rounded-lg p-1.5 text-muted hover:bg-slate-100" aria-label={t('previous')}>
+                <ChevronLeft size={18} />
+              </button>
+              <button onClick={() => move(1)} disabled={isCurrent} className="rounded-lg p-1.5 text-muted hover:bg-slate-100 disabled:opacity-30" aria-label={t('next')}>
+                <ChevronRight size={18} />
+              </button>
+            </div>
+          </div>
           <div className="grid grid-cols-7 gap-2 text-center">
-            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+            {weekdays.map((d, i) => (
               <div key={i} className="text-xs font-semibold text-muted">
                 {d}
               </div>
             ))}
-            {Array.from({ length: attendanceMonth.firstWeekday }, (_, i) => (
+            {Array.from({ length: month.firstWeekday }, (_, i) => (
               <div key={`b${i}`} />
             ))}
-            {days.map((d, i) => (
+            {month.days.map((d, i) => (
               <div key={i} className={`flex aspect-square items-center justify-center rounded-xl text-sm font-medium ${tone[d]}`}>
                 {i + 1}
               </div>

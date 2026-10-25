@@ -1,0 +1,39 @@
+// Canned bilingual tutor replies, used when no ANTHROPIC_API_KEY is set so the
+// AI Tutor still answers something sensible in an offline demo.
+const replies = [
+  {
+    match: /algebra|expression|term|variable|ಬೀಜ/i,
+    en: `**Algebraic expressions** combine numbers and letters (variables).\n\n• In 4x + 3, **4x** and **3** are *terms*.\n• **4** is the *coefficient* of x.\n• *Like terms* have the same variable: 3x and 5x → 8x.\n\nTry it: simplify 7a + 2b − 3a. (Answer: 4a + 2b)`,
+    kn: `**ಬೀಜಗಣಿತೀಯ ಅಭಿವ್ಯಕ್ತಿಗಳು** ಸಂಖ್ಯೆಗಳು ಮತ್ತು ಅಕ್ಷರಗಳನ್ನು (ಚರಾಂಶ) ಸೇರಿಸುತ್ತವೆ.\n\n• 4x + 3 ರಲ್ಲಿ **4x** ಮತ್ತು **3** ಪದಗಳು.\n• **4** ಎಂಬುದು x ನ ಸಹಗುಣಕ.\n• ಸಜಾತೀಯ ಪದಗಳು: 3x ಮತ್ತು 5x → 8x.\n\nಪ್ರಯತ್ನಿಸಿ: 7a + 2b − 3a ಸರಳೀಕರಿಸಿ. (ಉತ್ತರ: 4a + 2b)`,
+  },
+  {
+    match: /question|quiz|practice|test|ಪ್ರಶ್ನೆ/i,
+    en: `Here are 5 practice questions on Algebra:\n\n1. Simplify 6m − 2m + 3\n2. Find the value of 3x + 2 when x = 5\n3. How many terms are in 2p² − 4p + 9?\n4. Write the coefficient of y in −8xy\n5. Add 4a + 3 and 2a − 7\n\nReply with your answers and I'll check them! ✅`,
+    kn: `ಬೀಜಗಣಿತದ 5 ಅಭ್ಯಾಸ ಪ್ರಶ್ನೆಗಳು:\n\n1. 6m − 2m + 3 ಸರಳೀಕರಿಸಿ\n2. x = 5 ಆದಾಗ 3x + 2 ರ ಬೆಲೆ ಕಂಡುಹಿಡಿಯಿರಿ\n3. 2p² − 4p + 9 ರಲ್ಲಿ ಎಷ್ಟು ಪದಗಳಿವೆ?\n4. −8xy ನಲ್ಲಿ y ಯ ಸಹಗುಣಕ ಬರೆಯಿರಿ\n5. 4a + 3 ಮತ್ತು 2a − 7 ಕೂಡಿಸಿ\n\nನಿಮ್ಮ ಉತ್ತರಗಳನ್ನು ಕಳುಹಿಸಿ, ನಾನು ಪರಿಶೀಲಿಸುತ್ತೇನೆ! ✅`,
+  },
+  {
+    match: /force|motion|newton|ಬಲ|ಚಲನೆ/i,
+    en: `📝 **Notes: Force and Motion**\n\n• A **force** is a push or a pull.\n• Force can change an object's speed, direction or shape.\n• **Friction** opposes motion between two surfaces.\n• **Speed** = Distance ÷ Time (unit: m/s).\n• Balanced forces → no change in motion; unbalanced forces → motion changes.\n\nTip: Think of kicking a football — your kick is the force! ⚽`,
+    kn: `📝 **ಟಿಪ್ಪಣಿ: ಬಲ ಮತ್ತು ಚಲನೆ**\n\n• **ಬಲ** ಎಂದರೆ ತಳ್ಳುವಿಕೆ ಅಥವಾ ಎಳೆಯುವಿಕೆ.\n• ಬಲವು ವಸ್ತುವಿನ ವೇಗ, ದಿಕ್ಕು ಅಥವಾ ಆಕಾರ ಬದಲಿಸಬಹುದು.\n• **ಘರ್ಷಣೆ** ಚಲನೆಯನ್ನು ವಿರೋಧಿಸುತ್ತದೆ.\n• **ವೇಗ** = ದೂರ ÷ ಸಮಯ (ಮೀ/ಸೆ).\n\nಉದಾಹರಣೆ: ಫುಟ್‌ಬಾಲ್ ಒದೆಯುವುದು — ನಿಮ್ಮ ಒದೆತವೇ ಬಲ! ⚽`,
+  },
+  {
+    match: /constitution|government|ಸಂವಿಧಾನ/i,
+    en: `🇮🇳 **Our Constitution** is the rulebook of India. It came into effect on **26 January 1950**.\n\n• Dr. B. R. Ambedkar chaired the Drafting Committee.\n• It gives us **Fundamental Rights** (like equality and freedom of speech).\n• It also lists **Fundamental Duties**, like respecting the national flag.`,
+    kn: `🇮🇳 **ನಮ್ಮ ಸಂವಿಧಾನ** ಭಾರತದ ನಿಯಮ ಪುಸ್ತಕ. ಇದು **26 ಜನವರಿ 1950** ರಂದು ಜಾರಿಗೆ ಬಂತು.\n\n• ಡಾ. ಬಿ. ಆರ್. ಅಂಬೇಡ್ಕರ್ ಕರಡು ಸಮಿತಿಯ ಅಧ್ಯಕ್ಷರು.\n• ಇದು **ಮೂಲಭೂತ ಹಕ್ಕುಗಳನ್ನು** ನೀಡುತ್ತದೆ.\n• **ಮೂಲಭೂತ ಕರ್ತವ್ಯಗಳನ್ನೂ** ತಿಳಿಸುತ್ತದೆ.`,
+  },
+  {
+    match: /plan|revise|exam|schedule|ಯೋಜನೆ/i,
+    en: `Your Maths Unit Test is in **6 days**. Here's a quick plan:\n\n• Day 1–2: Revise Ch 4 & 5 (20 min/day)\n• Day 3: Lines and Angles basics\n• Day 4: 15 mixed questions\n• Day 5: Mock test\n• Day 6: Review mistakes 💪`,
+    kn: `ನಿಮ್ಮ ಗಣಿತ ಘಟಕ ಪರೀಕ್ಷೆ **6 ದಿನಗಳಲ್ಲಿ** ಇದೆ. ಯೋಜನೆ:\n\n• ದಿನ 1–2: ಅಧ್ಯಾಯ 4 ಮತ್ತು 5 ಪುನರಾವರ್ತನೆ\n• ದಿನ 3: ರೇಖೆ ಮತ್ತು ಕೋನಗಳು\n• ದಿನ 4: 15 ಮಿಶ್ರ ಪ್ರಶ್ನೆಗಳು\n• ದಿನ 5: ಅಣಕು ಪರೀಕ್ಷೆ\n• ದಿನ 6: ತಪ್ಪುಗಳ ವಿಮರ್ಶೆ 💪`,
+  },
+]
+
+const fallback = {
+  en: `Great question! 🌟 Let's break it down step by step. Could you tell me which subject and chapter this is from? I can explain it, make notes, or create practice questions for you.`,
+  kn: `ಉತ್ತಮ ಪ್ರಶ್ನೆ! 🌟 ಹಂತ ಹಂತವಾಗಿ ನೋಡೋಣ. ಇದು ಯಾವ ವಿಷಯ ಮತ್ತು ಅಧ್ಯಾಯದ್ದು ಎಂದು ತಿಳಿಸಿ. ನಾನು ವಿವರಿಸಬಹುದು, ಟಿಪ್ಪಣಿ ಮಾಡಬಹುದು ಅಥವಾ ಪ್ರಶ್ನೆಗಳನ್ನು ರಚಿಸಬಹುದು.`,
+}
+
+export function offlineReply(text, lang) {
+  const hit = replies.find((r) => r.match.test(text)) ?? fallback
+  return hit[lang]
+}
