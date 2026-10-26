@@ -1,7 +1,6 @@
 import express from 'express'
-import Anthropic from '@anthropic-ai/sdk'
 import { mockTest, subjectById } from '../shared/catalog.js'
-import { MODEL, aiEnabled, generateJSON, streamChat, translate } from './ai.js'
+import { MODEL, PROVIDER, aiEnabled, aiErrorCode, generateJSON, isAIError, streamChat, translate } from './ai.js'
 import {
   clearSessionCookie,
   createSession,
@@ -56,7 +55,7 @@ const id = (v) => {
 }
 const lang = (v) => (v === 'kn' ? 'kn' : 'en')
 
-// Fills in whichever language is missing, using Claude when available.
+// Fills in whichever language is missing, using AI translation when available.
 async function bilingual(fields) {
   const missing = { kn: [], en: [] }
   for (const [key, f] of Object.entries(fields)) {
@@ -320,7 +319,7 @@ api.post(
       } catch (err) {
         if (controller.signal.aborted) return
         console.error('AI tutor error:', err.status ?? '', err.message)
-        send({ error: err.status === 401 ? 'ai.badKey' : err.status === 429 ? 'ai.busy' : 'ai.failed' })
+        send({ error: aiErrorCode(err) })
       }
     }
     if (reply) run("INSERT INTO chat_messages (student_id, role, content) VALUES (?, 'assistant', ?)", req.user.id, reply)
@@ -611,19 +610,21 @@ api.post(
 
 // ---------- Misc ----------
 
-api.get('/health', (_req, res) => res.json({ ok: true, ai: aiEnabled(), model: aiEnabled() ? MODEL : null }))
+api.get('/health', (_req, res) => res.json({ ok: true, ai: aiEnabled(), provider: aiEnabled() ? PROVIDER : null, model: aiEnabled() ? MODEL : null }))
 
 api.use((_req, res) => res.status(404).json({ error: 'not.found' }))
 
 // eslint-disable-next-line no-unused-vars
 api.use((err, _req, res, _next) => {
-  if (err instanceof Anthropic.APIError) {
-    console.error('Claude API error:', err.status, err.message)
-    err = new HttpError(502, err.status === 401 ? 'ai.badKey' : err.status === 429 ? 'ai.busy' : 'ai.failed')
+  if (isAIError(err)) {
+    console.error('AI provider error:', err.status, err.message)
+    err = new HttpError(502, aiErrorCode(err))
   }
   const status = err.status ?? (err.type === 'entity.parse.failed' ? 400 : 500)
-  if (status >= 500) console.error(err)
+  // Our own errors carry a code the app can show; anything unexpected is logged and hidden.
+  const known = err instanceof HttpError || status < 500
+  if (!known) console.error(err)
   if (res.headersSent) return res.end()
-  res.status(status).json({ error: status >= 500 ? 'server.error' : err.message })
+  res.status(status).json({ error: known ? err.message : 'server.error' })
 })
 

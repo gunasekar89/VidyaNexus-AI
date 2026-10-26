@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # One-shot setup for a fresh Ubuntu machine (KodeKloud playground, AWS EC2, any VPS).
-# Installs Docker if needed, asks for your Claude API key once, then builds and starts VidyaNexus.
+# Installs Docker if needed, asks once for your AI settings (Azure OpenAI or Claude), then builds and starts VidyaNexus.
 #
 #   bash deploy/setup.sh
 #
-# Non-interactive: ANTHROPIC_API_KEY=sk-ant-... APP_PORT=80 bash deploy/setup.sh
+# Non-interactive: AZURE_OPENAI_ENDPOINT=... AZURE_OPENAI_API_KEY=... AZURE_OPENAI_DEPLOYMENT=... bash deploy/setup.sh
+#              or: ANTHROPIC_API_KEY=sk-ant-... APP_PORT=80 bash deploy/setup.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -33,14 +34,33 @@ fi
 # 3. Settings
 if [ ! -f .env ]; then
   cp .env.example .env
+  # Writes KEY=value into .env, escaping characters sed would treat specially.
+  set_env() {
+    [ -z "$2" ] && return 0
+    local v=${2//\\/\\\\}; v=${v//&/\\&}; v=${v//|/\\|}
+    sed -i "s|^$1=.*|$1=$v|" .env
+  }
+  az_endpoint="${AZURE_OPENAI_ENDPOINT:-}" az_key="${AZURE_OPENAI_API_KEY:-}" az_deployment="${AZURE_OPENAI_DEPLOYMENT:-}"
   key="${ANTHROPIC_API_KEY:-}"
-  if [ -z "$key" ] && [ -t 0 ]; then
-    read -rsp "Paste your Anthropic API key (starts with sk-ant-), or press Enter to run without AI: " key
-    echo
+  if [ -z "$az_key$key" ] && [ -t 0 ]; then
+    echo "Which AI should the tutor use?"
+    echo "  1) Azure OpenAI (KodeKloud Azure playground)"
+    echo "  2) Claude API key"
+    echo "  3) None for now (offline sample answers)"
+    read -rp "Choose 1, 2 or 3: " choice
+    case "$choice" in
+      1)
+        read -rp "Azure endpoint or Target URI (https://...): " az_endpoint
+        read -rsp "Azure key: " az_key; echo
+        if [[ "$az_endpoint" != *"/deployments/"* ]]; then read -rp "Deployment name (e.g. gpt-4o-mini): " az_deployment; fi
+        ;;
+      2) read -rsp "Paste your Anthropic API key (starts with sk-ant-): " key; echo ;;
+    esac
   fi
-  if [ -n "$key" ]; then
-    sed -i "s|^ANTHROPIC_API_KEY=.*|ANTHROPIC_API_KEY=${key}|" .env
-  fi
+  set_env AZURE_OPENAI_ENDPOINT "$az_endpoint"
+  set_env AZURE_OPENAI_API_KEY "$az_key"
+  set_env AZURE_OPENAI_DEPLOYMENT "$az_deployment"
+  set_env ANTHROPIC_API_KEY "$key"
   [ -n "${APP_PORT:-}" ] && sed -i "s|^APP_PORT=.*|APP_PORT=${APP_PORT}|" .env
   chmod 600 .env
 fi

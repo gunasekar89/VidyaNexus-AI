@@ -1,9 +1,35 @@
 import Anthropic from '@anthropic-ai/sdk'
 
-// All Claude calls go through this file. The key comes from ANTHROPIC_API_KEY;
-// without it the app still runs and the AI features fall back to offline replies.
-export const MODEL = process.env.ANTHROPIC_MODEL || 'claude-opus-5-5'
-export const aiEnabled = () => Boolean(process.env.ANTHROPIC_API_KEY)
+// All AI calls go through this file. Two providers are supported:
+//   - Claude (Anthropic API): set ANTHROPIC_API_KEY.
+//   - Azure OpenAI (e.g. a KodeKloud Azure playground): set AZURE_OPENAI_ENDPOINT,
+//     AZURE_OPENAI_API_KEY and AZURE_OPENAI_DEPLOYMENT.
+// AI_PROVIDER (anthropic | azure) picks one when both are set. With neither, the app
+// still runs and the AI features fall back to offline replies.
+const azure = parseAzureEndpoint(process.env.AZURE_OPENAI_ENDPOINT || '')
+azure.key = process.env.AZURE_OPENAI_API_KEY || ''
+// Values written into a pasted Target URI win, since they match that deployment.
+azure.deployment = azure.deployment || process.env.AZURE_OPENAI_DEPLOYMENT
+azure.apiVersion = azure.apiVersion || process.env.AZURE_OPENAI_API_VERSION || '2024-10-21'
+
+export const PROVIDER =
+  process.env.AI_PROVIDER?.toLowerCase() === 'azure' || (!process.env.AI_PROVIDER && !process.env.ANTHROPIC_API_KEY && azure.key)
+    ? 'azure'
+    : 'anthropic'
+export const MODEL = PROVIDER === 'azure' ? azure.deployment : process.env.ANTHROPIC_MODEL || 'claude-opus-5-5'
+export const aiEnabled = () =>
+  PROVIDER === 'azure' ? Boolean(azure.key && azure.endpoint && azure.deployment) : Boolean(process.env.ANTHROPIC_API_KEY)
+export const providerLabel = () => (PROVIDER === 'azure' ? `Azure OpenAI, deployment ${MODEL}` : `Claude, ${MODEL}`)
+
+// An error from either provider, with the HTTP status the provider returned.
+export class AIError extends Error {
+  constructor(status, message) {
+    super(message)
+    this.status = status
+  }
+}
+export const isAIError = (err) => err instanceof AIError || err instanceof Anthropic.APIError
+export const aiErrorCode = (err) => (err.status === 401 || err.status === 403 ? 'ai.badKey' : err.status === 429 ? 'ai.busy' : 'ai.failed')
 
 let client
 const getClient = () => (client ??= new Anthropic({ maxRetries: 2, timeout: 120_000 }))
@@ -21,6 +47,7 @@ const textOf = (message) =>
 
 // Streams a chat reply. Calls onText for every chunk and resolves with the full text.
 export async function streamChat({ system, messages, onText, signal }) {
+  if (PROVIDER === 'azure') return azureStreamChat({ system, messages, onText, signal })
   const stream = getClient().beta.messages.stream(
     {
       model: MODEL,
@@ -41,6 +68,7 @@ export async function streamChat({ system, messages, onText, signal }) {
 
 // One request whose answer must match a JSON schema (structured outputs).
 export async function generateJSON({ system, prompt, schema, effort = 'medium', maxTokens = 16000 }) {
+  if (PROVIDER === 'azure') return azureJSON({ system, prompt, schema })
   const message = await getClient().beta.messages.create({
     model: MODEL,
     max_tokens: maxTokens,
@@ -79,4 +107,85 @@ export async function translate(texts, target) {
     console.warn('Translation failed:', err.message)
     return null
   }
+}
+
+// ---------- Azure OpenAI ----------
+
+// Accepts either the resource endpoint (https://NAME.openai.azure.com/) or the full
+// "Target URI" Azure shows for a deployment, which also carries the deployment name
+// and api-version.
+function parseAzureEndpoint(value) {
+  if (!value) return { endpoint: '' }
+  try {
+    const url = new URL(value.trim())
+    const deployment = url.pathname.match(/\/openai\/deployments\/([^/]+)/)?.[1]
+    return { endpoint: url.origin, deployment: deployment && decodeURIComponent(deployment), apiVersion: url.searchParams.get('api-version') }
+  } catch {
+    return { endpoint: '' }
+  }
+}
+
+// System prompts arrive as Claude text blocks; Azure takes one plain string.
+const systemText = (system) => (Array.isArray(system) ? system.map((b) => b.text).join('\n\n') : system)
+
+async function azureRequest(body, signal) {
+  const url = `${azure.endpoint}/openai/deployments/${encodeURIComponent(azure.deployment)}/chat/completions?api-version=${encodeURIComponent(azure.apiVersion)}`
+  let res
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'api-key': azure.key },
+      body: JSON.stringify(body),
+      signal: signal ?? AbortSignal.timeout(120_000),
+    })
+  } catch (err) {
+    if (signal?.aborted) throw err
+    throw new AIError(502, `Could not reach Azure OpenAI: ${err.message}`)
+  }
+  if (!res.ok) {
+    const detail = await res.json().catch(() => null)
+    throw new AIError(res.status, `Azure OpenAI ${res.status}: ${detail?.error?.message ?? res.statusText}`)
+  }
+  return res
+}
+
+async function azureStreamChat({ system, messages, onText, signal }) {
+  const res = await azureRequest({ messages: [{ role: 'system', content: systemText(system) }, ...messages], stream: true }, signal)
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let text = ''
+  let finish = null
+  for await (const chunk of res.body) {
+    buffer += decoder.decode(chunk, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop()
+    for (const line of lines) {
+      if (!line.startsWith('data:')) continue
+      const data = line.slice(5).trim()
+      if (data === '[DONE]') continue
+      // The first chunk only carries content-filter results and has no choices.
+      const choice = JSON.parse(data).choices?.[0]
+      if (!choice) continue
+      const delta = choice.delta?.content
+      if (delta) {
+        text += delta
+        onText(delta)
+      }
+      if (choice.finish_reason) finish = choice.finish_reason
+    }
+  }
+  return { text, stopReason: finish === 'content_filter' ? 'refusal' : finish }
+}
+
+async function azureJSON({ system, prompt, schema }) {
+  const res = await azureRequest({
+    messages: [
+      { role: 'system', content: systemText(system) },
+      { role: 'user', content: prompt },
+    ],
+    response_format: { type: 'json_schema', json_schema: { name: 'result', strict: true, schema } },
+  })
+  const choice = (await res.json()).choices?.[0]
+  if (!choice || choice.finish_reason === 'content_filter' || choice.message?.refusal) throw new Error('ai.refused')
+  return JSON.parse(choice.message.content)
 }

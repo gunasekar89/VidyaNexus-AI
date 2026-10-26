@@ -1,16 +1,16 @@
 # VidyaNexus-AI
 Smart Learning for Every School Day
 
-A bilingual (English / ಕನ್ನಡ) school app for students and teachers, with a real AI tutor powered by Claude. Students see their timetable, homework, goals, tests, attendance and progress; teachers set homework, post announcements, schedule exams, enter marks, take attendance and add students. Everything is saved in a database.
+A bilingual (English / ಕನ್ನಡ) school app for students and teachers, with a real AI tutor (Azure OpenAI or Claude). Students see their timetable, homework, goals, tests, attendance and progress; teachers set homework, post announcements, schedule exams, enter marks, take attendance and add students. Everything is saved in a database.
 
 ## Run it with Docker (recommended)
 
 ```bash
-cp .env.example .env          # then put your ANTHROPIC_API_KEY in .env
+cp .env.example .env          # then fill in the Azure OpenAI or Claude settings in .env
 docker compose up -d --build  # http://localhost
 ```
 
-On a fresh Ubuntu machine, `bash deploy/setup.sh` installs Docker, asks for the key and starts everything. See [deploy/KODEKLOUD.md](deploy/KODEKLOUD.md) for step-by-step KodeKloud (Docker playground or AWS EC2) instructions.
+On a fresh Ubuntu machine, `bash deploy/setup.sh` installs Docker, asks for the AI settings and starts everything. See [deploy/KODEKLOUD.md](deploy/KODEKLOUD.md) for step-by-step KodeKloud (Docker playground or AWS EC2) instructions.
 
 Demo logins (shown on the login page until their passwords are changed):
 
@@ -33,17 +33,20 @@ npm run dev                                       # web app on http://localhost:
 
 `npm run build && npm start` serves the built app and API together on port 3000.
 
-## The Claude API key
+## AI settings
 
-The AI Tutor, AI revision plans, AI practice tests and automatic English ↔ Kannada translation of teacher posts use the Claude API. Set `ANTHROPIC_API_KEY` (in `.env` for Docker, or the environment). The key stays on the server and is never sent to browsers. Without a key the app still runs: the tutor gives offline sample answers and the AI buttons explain that AI is off.
+The AI Tutor, AI revision plans, AI practice tests and automatic English ↔ Kannada translation of teacher posts can use either provider (in `.env` for Docker, or the environment):
 
-The model defaults to `claude-opus-5-5` and can be changed with `ANTHROPIC_MODEL`. `AI_REQUESTS_PER_10_MIN` (default 40) caps AI requests per student to protect your budget.
+- **Azure OpenAI**: set `AZURE_OPENAI_ENDPOINT` (the resource endpoint or the deployment's full Target URI), `AZURE_OPENAI_API_KEY` and, unless it's in the Target URI, `AZURE_OPENAI_DEPLOYMENT`. Needs a chat model with structured outputs, such as gpt-4o-mini. [deploy/KODEKLOUD.md](deploy/KODEKLOUD.md) shows how to get these from the KodeKloud Azure playground.
+- **Claude**: set `ANTHROPIC_API_KEY`. The model defaults to `claude-opus-5-5` and can be changed with `ANTHROPIC_MODEL`.
+
+If both are set, `AI_PROVIDER=azure` or `AI_PROVIDER=anthropic` picks one (Claude by default). Keys stay on the server and are never sent to browsers. Without any key the app still runs: the tutor gives offline sample answers and the AI buttons explain that AI is off. `AI_REQUESTS_PER_10_MIN` (default 40) caps AI requests per student to protect your budget.
 
 ## Features
 
 **Students**
 - **Dashboard**: greeting banner, today's classes, homework due, next exam and this month's attendance, today's timetable with a LIVE marker, continue learning, AI study coach plan, upcoming tasks, weekly goals and announcements.
-- **AI Tutor**: streaming chat with Claude that knows the student's chapters, exams, homework and marks, answers in English or Kannada, and keeps the conversation.
+- **AI Tutor**: streaming AI chat that knows the student's chapters, exams, homework and marks, answers in English or Kannada, and keeps the conversation.
 - **AI Study Coach**: a revision plan generated for the next exam; "Start plan" adds its steps to the weekly goals.
 - **Subjects**: chapters with progress; mark chapters complete or ask the tutor to explain the current one.
 - **Homework**: tick off homework set by teachers; due dates show as Today / Tomorrow / date.
@@ -60,7 +63,7 @@ The model defaults to `claude-opus-5-5` and can be changed with `ANTHROPIC_MODEL
 - Take attendance for any day.
 - Add student accounts.
 
-Teachers can type in English, Kannada or both; a blank side is filled in by Claude's translation.
+Teachers can type in English, Kannada or both; a blank side is filled in by AI translation.
 
 Across the app the **EN / ಕನ್ನಡ** toggle translates the whole interface (and is remembered per user), **⌘K / Ctrl+K** searches pages, subjects, chapters, homework, tests and announcements, and the bell shows homework, announcement and coach notifications. On phones the layout switches to the mobile design with a bottom tab bar.
 

@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import express from 'express'
-import { MODEL, aiEnabled } from './ai.js'
+import { aiEnabled, providerLabel } from './ai.js'
 import { loadUser } from './auth.js'
 import { run } from './db.js'
 import { api } from './routes.js'
@@ -36,5 +36,9 @@ if (fs.existsSync(dist)) {
 
 app.listen(PORT, () => {
   console.log(`VidyaNexus is running on http://localhost:${PORT}`)
-  console.log(aiEnabled() ? `AI Tutor: on (${MODEL})` : 'AI Tutor: offline replies (set ANTHROPIC_API_KEY to turn on Claude)')
+  console.log(
+  aiEnabled()
+    ? `AI Tutor: on (${providerLabel()})`
+    : 'AI Tutor: offline replies (set ANTHROPIC_API_KEY, or the AZURE_OPENAI_* settings, to turn on AI)',
+)
 })
