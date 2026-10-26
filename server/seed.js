@@ -128,10 +128,27 @@ export function seedIfEmpty() {
       results: { mathematics: 42, science: 38, english: 45, 'social-science': 40, kannada: 36 },
     })
 
-    classmates.forEach((c, i) => {
+    const classmateIds = classmates.map((c, i) => {
       const id = addStudent({ ...c, password: process.env.DEMO_STUDENT_PASSWORD || 'student123' })
       seedStudentHistory(id, rng(100 + i), { chapters: {}, absentRate: 0.08 + i * 0.03, streak: false, results: {} })
+      return id
     })
+
+    const awards = [
+      [jason, 'Inter-School Maths Olympiad', 'ಅಂತರ-ಶಾಲಾ ಗಣಿತ ಒಲಿಂಪಿಯಾಡ್', 'Solved all 25 problems in the final round.', 'ಅಂತಿಮ ಸುತ್ತಿನಲ್ಲಿ ಎಲ್ಲಾ 25 ಸಮಸ್ಯೆಗಳನ್ನು ಬಿಡಿಸಿದರು.', 'academic', 'district', 'gold', -38],
+      [jason, 'Best Science Model – Solar Cooker', 'ಅತ್ಯುತ್ತಮ ವಿಜ್ಞಾನ ಮಾದರಿ – ಸೌರ ಕುಕ್ಕರ್', 'School Science Exhibition', 'ಶಾಲಾ ವಿಜ್ಞಾನ ಪ್ರದರ್ಶನ', 'academic', 'school', 'gold', -76],
+      [jason, 'Star of the Month', 'ತಿಂಗಳ ತಾರೆ', 'For always helping classmates with Maths.', 'ಸಹಪಾಠಿಗಳಿಗೆ ಗಣಿತದಲ್ಲಿ ಸದಾ ಸಹಾಯ ಮಾಡಿದ್ದಕ್ಕಾಗಿ.', 'conduct', 'class', 'special', -20],
+      [jason, 'Sports Day 100 m Race', 'ಕ್ರೀಡಾ ದಿನ 100 ಮೀ ಓಟ', '', '', 'sports', 'school', 'silver', -118],
+      [jason, 'Kannada Essay Competition', 'ಕನ್ನಡ ಪ್ರಬಂಧ ಸ್ಪರ್ಧೆ', 'Topic: Our Karnataka', 'ವಿಷಯ: ನಮ್ಮ ಕರ್ನಾಟಕ', 'arts', 'school', 'bronze', -150],
+      [classmateIds[1], 'Inter-School Quiz', 'ಅಂತರ-ಶಾಲಾ ರಸಪ್ರಶ್ನೆ', '', '', 'academic', 'district', 'participation', -45],
+    ]
+    for (const [student, ten, tkn, nen, nkn, category, level, medal, offset] of awards) {
+      run(
+        `INSERT INTO awards (student_id, title_en, title_kn, note_en, note_kn, category, level, medal, award_date, created_by, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        student, ten, tkn, nen, nkn, category, level, medal, addDays(today, offset), teacherId, `${addDays(today, offset)} 10:00:00`,
+      )
+    }
 
     const homework = [
       ['mathematics', 'Mathematics Homework', 'ಗಣಿತ ಮನೆಗೆಲಸ', 'Ch 5 – Practice questions', 'ಅಧ್ಯಾಯ 5 – ಅಭ್ಯಾಸ ಪ್ರಶ್ನೆಗಳು', 0, 0],

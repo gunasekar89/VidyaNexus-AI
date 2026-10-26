@@ -13,6 +13,7 @@ import TestsExams from './pages/TestsExams'
 import Attendance from './pages/Attendance'
 import AnnouncementsPage from './pages/AnnouncementsPage'
 import Progress from './pages/Progress'
+import Awards from './pages/Awards'
 import Profile from './pages/Profile'
 import Login from './pages/Login'
 import TeacherDesk from './pages/TeacherDesk'
@@ -80,6 +81,7 @@ export default function App() {
           <Route path="attendance" element={<Attendance />} />
           <Route path="announcements" element={<AnnouncementsPage />} />
           <Route path="progress" element={<Progress />} />
+          <Route path="awards" element={<Awards />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

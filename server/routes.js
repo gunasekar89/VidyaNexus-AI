@@ -1,5 +1,5 @@
 import express from 'express'
-import { mockTest, subjectById } from '../shared/catalog.js'
+import { awardCategories, awardLevels, awardMedals, mockTest, subjectById } from '../shared/catalog.js'
 import { MODEL, PROVIDER, aiEnabled, aiErrorCode, generateJSON, isAIError, streamChat, translate } from './ai.js'
 import {
   clearSessionCookie,
@@ -23,6 +23,7 @@ import {
   studentContext,
   studentOverview,
   toAnnouncement,
+  toAward,
   toExam,
   toHomework,
   toResult,
@@ -461,6 +462,7 @@ api.get('/teacher/overview', teacher, (req, res) => {
     announcements: all('SELECT * FROM announcements ORDER BY created_at DESC, id DESC').map(toAnnouncement),
     exams: all('SELECT * FROM exams ORDER BY exam_date DESC, id DESC').map(toExam),
     results: all('SELECT * FROM results ORDER BY created_at DESC, id DESC LIMIT 100').map(toResult),
+    awards: all('SELECT * FROM awards ORDER BY award_date DESC, id DESC LIMIT 100').map(toAward),
     categories: Object.keys(ANNOUNCEMENT_CATEGORIES),
   })
 })
@@ -568,6 +570,34 @@ api.post(
 
 api.delete('/teacher/results/:id', teacher, (req, res) => {
   run('DELETE FROM results WHERE id = ?', id(req.params.id))
+  res.json({ ok: true })
+})
+
+const oneOf = (v, options) => {
+  if (!Object.hasOwn(options, v)) throw bad()
+  return v
+}
+
+api.post(
+  '/teacher/awards',
+  teacher,
+  wrap(async (req, res) => {
+    const b = req.body
+    const student = one("SELECT id FROM users WHERE id = ? AND role = 'student'", id(b.studentId))
+    if (!student) throw bad()
+    const awardDate = date(b.date)
+    const f = await bilingual({ title: requirePair(pair(b, 'title', 140)), note: pair(b, 'note', 300) })
+    run(
+      `INSERT INTO awards (student_id, title_en, title_kn, note_en, note_kn, category, level, medal, award_date, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      student.id, f.title.en, f.title.kn, f.note.en, f.note.kn,
+      oneOf(b.category, awardCategories), oneOf(b.level, awardLevels), oneOf(b.medal, awardMedals), awardDate, req.user.id,
+    )
+    res.json({ ok: true })
+  }),
+)
+
+api.delete('/teacher/awards/:id', teacher, (req, res) => {
+  run('DELETE FROM awards WHERE id = ?', id(req.params.id))
   res.json({ ok: true })
 })
 

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { CalendarCheck, ClipboardList, FileText, GraduationCap, Loader2, Megaphone, Plus, Trash2, Users } from 'lucide-react'
+import { CalendarCheck, ClipboardList, FileText, GraduationCap, Loader2, Megaphone, Plus, Trash2, Trophy, Users } from 'lucide-react'
 import { useApp } from '../AppContext'
 import { api } from '../api'
-import { subjectById, subjects } from '../../shared/catalog'
+import { awardCategories, awardLevels, awardMedals, subjectById, subjects } from '../../shared/catalog'
 import { dateLabel, isoDate, relativeTime } from '../lib/dates'
 import { Card, PageHeader, Pill, SubjectIcon } from '../components/ui'
 import { Avatar } from '../components/Layout'
@@ -451,11 +451,94 @@ function StudentsTab({ desk, reload }) {
   )
 }
 
+function OptionSelect({ value, onChange, options, icons }) {
+  const { tr } = useApp()
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)} className={field}>
+      {Object.entries(options).map(([k, o]) => (
+        <option key={k} value={k}>
+          {icons && o.icon ? `${o.icon} ` : ''}
+          {tr(o)}
+        </option>
+      ))}
+    </select>
+  )
+}
+
+function AwardsTab({ desk, reload }) {
+  const { t, tr } = useApp()
+  const f = useForm(
+    { studentId: desk.students[0]?.id ?? '', category: 'academic', level: 'school', medal: 'gold', date: isoDate() },
+    '/teacher/awards',
+    reload,
+  )
+  const studentName = Object.fromEntries(desk.students.map((s) => [s.id, s.name]))
+  return (
+    <div className="grid gap-4 xl:grid-cols-[1fr_1.2fr]">
+      <Card className="p-5">
+        <h2 className="mb-4 font-semibold text-ink">{t('giveAward')}</h2>
+        <form onSubmit={f.submit} className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label>
+              <Label>{t('student')}</Label>
+              <select required value={f.values.studentId} onChange={(e) => f.set('studentId', e.target.value)} className={field}>
+                {desk.students.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <Label>{t('date')}</Label>
+              <input type="date" required value={f.values.date} onChange={(e) => f.set('date', e.target.value)} className={field} />
+            </label>
+          </div>
+          <BilingualInput name="title" label={t('awardName')} values={f.values} onChange={f.set} required />
+          <BilingualInput name="note" label={t('details')} values={f.values} onChange={f.set} />
+          <div className="grid gap-3 sm:grid-cols-3">
+            <label>
+              <Label>{t('place')}</Label>
+              <OptionSelect value={f.values.medal} onChange={(v) => f.set('medal', v)} options={awardMedals} icons />
+            </label>
+            <label>
+              <Label>{t('category')}</Label>
+              <OptionSelect value={f.values.category} onChange={(v) => f.set('category', v)} options={awardCategories} icons />
+            </label>
+            <label>
+              <Label>{t('level')}</Label>
+              <OptionSelect value={f.values.level} onChange={(v) => f.set('level', v)} options={awardLevels} />
+            </label>
+          </div>
+          <TranslateHint />
+          <SaveButton saving={f.saving} label={t('giveAward')} />
+        </form>
+      </Card>
+      <Card className="divide-y divide-slate-100">
+        {desk.awards.length === 0 && <p className="p-6 text-center text-sm text-muted">{t('nothingYet')}</p>}
+        {desk.awards.map((a) => (
+          <div key={a.id} className="flex items-center gap-3 p-4">
+            <span className="text-3xl">{awardMedals[a.medal]?.icon ?? '🏆'}</span>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-medium text-ink">{tr(a.title)}</div>
+              <div className="truncate text-xs text-muted">
+                {studentName[a.studentId]} · {tr(awardLevels[a.level])} · {tr(dateLabel(a.date, { day: 'numeric', month: 'short', year: 'numeric' }))}
+              </div>
+            </div>
+            <DeleteButton path={`/teacher/awards/${a.id}`} reload={reload} />
+          </div>
+        ))}
+      </Card>
+    </div>
+  )
+}
+
 const tabs = [
   { key: 'homework', label: 'homework', icon: FileText, Component: HomeworkTab },
   { key: 'announcements', label: 'announcements', icon: Megaphone, Component: AnnouncementsTab },
   { key: 'exams', label: 'examsAndMarks', icon: ClipboardList, Component: ExamsTab },
   { key: 'attendance', label: 'attendance', icon: CalendarCheck, Component: AttendanceTab },
+  { key: 'awards', label: 'awards', icon: Trophy, Component: AwardsTab },
   { key: 'students', label: 'students', icon: Users, Component: StudentsTab },
 ]
 
