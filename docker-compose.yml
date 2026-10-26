@@ -1,0 +1,29 @@
+# One command to run VidyaNexus:  docker compose up -d --build
+# Settings come from a .env file next to this one (copy .env.example to .env).
+services:
+  app:
+    build: .
+    image: vidyanexus:latest
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-80}:3000"
+    environment:
+      AI_PROVIDER: ${AI_PROVIDER:-}
+      AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-}
+      AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}
+      AZURE_OPENAI_DEPLOYMENT: ${AZURE_OPENAI_DEPLOYMENT:-}
+      AZURE_OPENAI_API_VERSION: ${AZURE_OPENAI_API_VERSION:-}
+      AZURE_OPENAI_MAX_TOKENS: ${AZURE_OPENAI_MAX_TOKENS:-1000}
+      AZURE_OPENAI_HISTORY: ${AZURE_OPENAI_HISTORY:-6}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-opus-5-5}
+      AI_REQUESTS_PER_10_MIN: ${AI_REQUESTS_PER_10_MIN:-40}
+      SHOW_DEMO_LOGINS: ${SHOW_DEMO_LOGINS:-true}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      DEMO_STUDENT_PASSWORD: ${DEMO_STUDENT_PASSWORD:-}
+      DEMO_TEACHER_PASSWORD: ${DEMO_TEACHER_PASSWORD:-}
+    volumes:
+      - vidyanexus-data:/data
+
+volumes:
+  vidyanexus-data:

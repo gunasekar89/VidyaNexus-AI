@@ -2,12 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight, Search } from 'lucide-react'
 import { useApp } from '../AppContext'
-import { announcements, exams, homework, subjectById, subjects } from '../data/mock'
 import { navItems } from './nav'
 
 // ⌘K command palette that searches pages, subjects, chapters, homework, tests and announcements.
 export default function SearchPalette({ open, onClose }) {
-  const { t, tr } = useApp()
+  const { t, tr, data, subjects, subjectById, homework } = useApp()
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(0)
   const inputRef = useRef(null)
@@ -29,18 +28,18 @@ export default function SearchPalette({ open, onClose }) {
         s.chapters.map((c) => ({ group: t('chapters'), label: tr(c), hint: tr(s.name), to: `/subjects/${s.id}` })),
       ),
       ...homework.map((h) => ({ group: t('homework'), label: tr(h.title), hint: tr(h.detail), to: '/homework' })),
-      ...exams.map((e) => ({
+      ...data.exams.map((e) => ({
         group: t('testsExams'),
         label: `${tr(subjectById[e.subject].name)} – ${tr(e.name)}`,
-        hint: tr(e.date),
+        hint: tr(e.dateLabel),
         to: '/tests',
       })),
-      ...announcements.map((a) => ({ group: t('announcements'), label: tr(a.title), hint: tr(a.time), to: '/announcements' })),
+      ...data.announcements.map((a) => ({ group: t('announcements'), label: tr(a.title), hint: tr(a.time), to: '/announcements' })),
     ]
     const q = query.trim().toLowerCase()
     if (!q) return all.slice(0, 9)
     return all.filter((i) => `${i.label} ${i.hint}`.toLowerCase().includes(q)).slice(0, 12)
-  }, [query, t, tr])
+  }, [query, t, tr, data, subjects, subjectById, homework])
 
   if (!open) return null
 

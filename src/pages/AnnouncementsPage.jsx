@@ -1,20 +1,25 @@
 import { useState } from 'react'
+import { CalendarDays } from 'lucide-react'
 import { useApp } from '../AppContext'
-import { announcements } from '../data/mock'
+import { dateLabel } from '../lib/dates'
 import { Card, PageHeader } from '../components/ui'
 import { AnnouncementIcon } from '../components/dashboard'
 
 export default function AnnouncementsPage() {
-  const { t, tr } = useApp()
+  const { t, tr, data } = useApp()
+  const { announcements } = data
   const [filter, setFilter] = useState('all')
   const filters = [
     { key: 'all', label: t('all') },
     { key: 'important', label: t('important') },
-    { key: 'event', label: t('events') },
+    { key: 'event', label: t('events'), match: ['event', 'meeting', 'celebration'] },
     { key: 'holiday', label: t('holidays') },
     { key: 'library', label: t('library') },
   ]
-  const list = announcements.filter((a) => (filter === 'all' ? true : filter === 'important' ? a.important : a.category === filter))
+  const active = filters.find((f) => f.key === filter)
+  const list = announcements.filter((a) =>
+    filter === 'all' ? true : filter === 'important' ? a.important : (active.match ?? [filter]).includes(a.category),
+  )
 
   return (
     <div>
@@ -31,6 +36,7 @@ export default function AnnouncementsPage() {
         ))}
       </div>
       <div className="space-y-3">
+        {list.length === 0 && <Card className="p-8 text-center text-sm text-muted">{t('noAnnouncements')}</Card>}
         {list.map((a) => (
           <Card key={a.id} className="flex items-start gap-4 p-5">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-50">
@@ -41,7 +47,12 @@ export default function AnnouncementsPage() {
                 <h2 className="font-semibold text-ink">{tr(a.title)}</h2>
                 {a.important && <span className="rounded-md bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-600">{t('important')}</span>}
               </div>
-              <p className="mt-1 text-sm text-muted">{tr(a.body)}</p>
+              <p className="mt-1 whitespace-pre-line text-sm text-muted">{tr(a.body)}</p>
+              {a.eventDate && (
+                <p className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-700">
+                  <CalendarDays size={13} /> {tr(dateLabel(a.eventDate, { weekday: 'short', day: 'numeric', month: 'short' }))}
+                </p>
+              )}
             </div>
             <span className="shrink-0 text-xs text-muted">{tr(a.time)}</span>
           </Card>

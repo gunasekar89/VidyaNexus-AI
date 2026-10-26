@@ -2,12 +2,11 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Check } from 'lucide-react'
 import { useApp } from '../AppContext'
-import { subjectById } from '../data/mock'
 import { Card, PageHeader, SubjectIcon } from '../components/ui'
 import { DuePill } from '../components/dashboard'
 
 export default function Homework() {
-  const { t, tr, homework, toggleHomework, showToast } = useApp()
+  const { t, tr, homework, toggleHomework, showToast, subjectById } = useApp()
   const [filter, setFilter] = useState('pending')
   const filters = [
     { key: 'pending', label: t('pending'), count: homework.filter((h) => !h.done).length },

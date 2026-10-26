@@ -1,14 +1,18 @@
 {
   "name": "vidyanexus-ai",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:server": "node --disable-warning=ExperimentalWarning --watch server/index.js",
     "build": "vite build",
+    "start": "node --disable-warning=ExperimentalWarning server/index.js",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "1.3.0",
+    "express": "4.22.3",
     "lucide-react": "0.460.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
@@ -20,5 +24,8 @@
     "postcss": "8.4.49",
     "tailwindcss": "3.4.17",
     "vite": "5.4.11"
+  },
+  "engines": {
+    "node": ">=22.13"
   }
 }

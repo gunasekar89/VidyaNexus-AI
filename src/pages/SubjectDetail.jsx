@@ -1,13 +1,12 @@
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { ArrowLeft, CheckCircle2, Circle, PlayCircle, Sparkles } from 'lucide-react'
 import { useApp } from '../AppContext'
-import { subjectById } from '../data/mock'
 import { Card, ProgressBar, SubjectIcon } from '../components/ui'
 import { DuePill } from '../components/dashboard'
 
 export default function SubjectDetail() {
   const { id } = useParams()
-  const { t, tr, showToast, homework } = useApp()
+  const { t, tr, showToast, homework, subjectById, setChapterDone } = useApp()
   const s = subjectById[id]
   if (!s) return <Navigate to="/subjects" replace />
   const tasks = homework.filter((h) => h.subject === id)
@@ -30,7 +29,7 @@ export default function SubjectDetail() {
           </div>
         </div>
         <Link
-          to={`/ai-tutor?prompt=${encodeURIComponent(`Explain ${s.chapters.find((c) => c.current)?.en ?? s.name.en}`)}`}
+          to={`/ai-tutor?prompt=${encodeURIComponent(`${t('explainPrompt')} ${tr(s.chapters.find((c) => c.current) ?? s.name)}`)}`}
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
         >
           <Sparkles size={16} /> {t('aiTutor')}
@@ -57,14 +56,34 @@ export default function SubjectDetail() {
                   {i + 1}. {tr(c)}
                 </span>
                 {c.current && (
+                  <>
+                    <Link
+                      to={`/ai-tutor?prompt=${encodeURIComponent(`${t('explainPrompt')} ${tr(c)}`)}`}
+                      className="hidden rounded-lg border border-brand-200 px-3 py-1 text-xs font-semibold text-brand-700 hover:bg-brand-50 sm:block"
+                    >
+                      {t('continue')}
+                    </Link>
+                    <button
+                      onClick={() =>
+                        setChapterDone(s.id, c.index, true)
+                          .then(() => showToast(`✅ ${tr(c)}`))
+                          .catch(() => {})
+                      }
+                      className="rounded-lg bg-brand-600 px-3 py-1 text-xs font-semibold text-white"
+                    >
+                      {t('markComplete')}
+                    </button>
+                  </>
+                )}
+                {c.done && (
                   <button
-                    onClick={() => showToast(`${t('continue')}: ${tr(c)}`)}
-                    className="rounded-lg bg-brand-600 px-3 py-1 text-xs font-semibold text-white"
+                    onClick={() => setChapterDone(s.id, c.index, false).catch(() => {})}
+                    className="text-xs text-emerald-600 hover:underline"
+                    title={t('markUndone')}
                   >
-                    {t('continue')}
+                    {t('done')}
                   </button>
                 )}
-                {c.done && <span className="text-xs text-emerald-600">{t('done')}</span>}
               </li>
             ))}
           </ol>
