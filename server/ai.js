@@ -11,6 +11,10 @@ azure.key = process.env.AZURE_OPENAI_API_KEY || ''
 // Values written into a pasted Target URI win, since they match that deployment.
 azure.deployment = azure.deployment || process.env.AZURE_OPENAI_DEPLOYMENT
 azure.apiVersion = azure.apiVersion || process.env.AZURE_OPENAI_API_VERSION || '2024-10-21'
+// Playground deployments have tiny quotas (e.g. 2,000 tokens a minute), and Azure counts
+// the reply limit against them, so keep replies and history short.
+azure.maxTokens = Number(process.env.AZURE_OPENAI_MAX_TOKENS) || 1000
+azure.historyLimit = Number(process.env.AZURE_OPENAI_HISTORY) || 6
 
 export const PROVIDER =
   process.env.AI_PROVIDER?.toLowerCase() === 'azure' || (!process.env.AI_PROVIDER && !process.env.ANTHROPIC_API_KEY && azure.key)
@@ -128,19 +132,40 @@ function parseAzureEndpoint(value) {
 // System prompts arrive as Claude text blocks; Azure takes one plain string.
 const systemText = (system) => (Array.isArray(system) ? system.map((b) => b.text).join('\n\n') : system)
 
+const sleep = (ms, signal) =>
+  new Promise((resolve, reject) => {
+    const timer = setTimeout(resolve, ms)
+    signal?.addEventListener('abort', () => (clearTimeout(timer), reject(signal.reason)), { once: true })
+  })
+
+// How long Azure asks us to wait after a 429, in ms (null if it doesn't say).
+function retryDelay(res) {
+  const ms = Number(res.headers.get('retry-after-ms'))
+  if (ms > 0) return ms
+  const seconds = Number(res.headers.get('retry-after'))
+  return seconds > 0 ? seconds * 1000 : null
+}
+
 async function azureRequest(body, signal) {
   const url = `${azure.endpoint}/openai/deployments/${encodeURIComponent(azure.deployment)}/chat/completions?api-version=${encodeURIComponent(azure.apiVersion)}`
   let res
-  try {
-    res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'api-key': azure.key },
-      body: JSON.stringify(body),
-      signal: signal ?? AbortSignal.timeout(120_000),
-    })
-  } catch (err) {
-    if (signal?.aborted) throw err
-    throw new AIError(502, `Could not reach Azure OpenAI: ${err.message}`)
+  // With a per-minute quota, waiting out a short 429 beats failing the student's request.
+  for (let attempt = 0; ; attempt++) {
+    try {
+      res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'api-key': azure.key },
+        body: JSON.stringify({ max_completion_tokens: azure.maxTokens, ...body }),
+        signal: signal ?? AbortSignal.timeout(120_000),
+      })
+    } catch (err) {
+      if (signal?.aborted) throw err
+      throw new AIError(502, `Could not reach Azure OpenAI: ${err.message}`)
+    }
+    const wait = res.status === 429 && attempt < 2 ? retryDelay(res) ?? 10_000 : null
+    if (wait === null || wait > 35_000) break
+    await res.body?.cancel()
+    await sleep(wait + 250, signal)
   }
   if (!res.ok) {
     const detail = await res.json().catch(() => null)
@@ -150,7 +175,9 @@ async function azureRequest(body, signal) {
 }
 
 async function azureStreamChat({ system, messages, onText, signal }) {
-  const res = await azureRequest({ messages: [{ role: 'system', content: systemText(system) }, ...messages], stream: true }, signal)
+  const recent = messages.slice(-azure.historyLimit)
+  while (recent.length > 1 && recent[0].role !== 'user') recent.shift()
+  const res = await azureRequest({ messages: [{ role: 'system', content: systemText(system) }, ...recent], stream: true, max_completion_tokens: Math.min(azure.maxTokens, 700) }, signal)
   const decoder = new TextDecoder()
   let buffer = ''
   let text = ''
@@ -187,5 +214,6 @@ async function azureJSON({ system, prompt, schema }) {
   })
   const choice = (await res.json()).choices?.[0]
   if (!choice || choice.finish_reason === 'content_filter' || choice.message?.refusal) throw new Error('ai.refused')
+  if (choice.finish_reason === 'length') throw new AIError(502, 'Azure OpenAI reply was cut off; raise AZURE_OPENAI_MAX_TOKENS')
   return JSON.parse(choice.message.content)
 }
