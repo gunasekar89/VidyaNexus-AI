@@ -5,12 +5,12 @@
 
 // Default profile for the seeded demo student.
 export const demoStudent = {
-  name: 'Ananya S.',
-  firstName: { en: 'Ananya', kn: 'ಅನನ್ಯ' },
+  name: 'Jason',
+  firstName: { en: 'Jason', kn: 'ಜೇಸನ್' },
   className: { en: 'Class 7A', kn: '7ನೇ ತರಗತಿ ಎ' },
   rollNo: '07A-18',
   school: { en: 'Vidya Public School, Bengaluru', kn: 'ವಿದ್ಯಾ ಪಬ್ಲಿಕ್ ಶಾಲೆ, ಬೆಂಗಳೂರು' },
-  email: 'ananya.s@vidyanexus.school',
+  email: 'jason@vidyanexus.school',
   guardian: 'Suresh K.',
   phone: '+91 98450 12345',
 }
@@ -22,7 +22,7 @@ export const subjects = [
     topic: { en: 'Algebra · Chapter 5', kn: 'ಬೀಜಗಣಿತ · ಅಧ್ಯಾಯ 5' },
     icon: 'pi',
     color: 'orange',
-    teacher: 'Mrs. Lakshmi R.',
+    teacher: 'Dola Ramesh',
     chapters: [
       { en: 'Integers', kn: 'ಪೂರ್ಣಾಂಕಗಳು' },
       { en: 'Fractions and Decimals', kn: 'ಭಿನ್ನರಾಶಿ ಮತ್ತು ದಶಮಾಂಶ' },

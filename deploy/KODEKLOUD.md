@@ -52,7 +52,7 @@ The **Ubuntu 22.04 / Ubuntu playground** works the same way; the script installs
 
 ## After it's running
 
-- **Logins**: student `ananya.s@vidyanexus.school` / `ananya123`, teacher `lakshmi.r@vidyanexus.school` / `teacher123`. Change them from *Profile → Change password* before sharing a public link; the demo hints disappear from the login page once you do.
+- **Logins**: student `jason@vidyanexus.school` / `jason123`, teacher `dola.ramesh@vidyanexus.school` / `teacher123`. Change them from *Profile → Change password* before sharing a public link; the demo hints disappear from the login page once you do.
 - **Add or change the AI settings later** (for example a new Azure playground key): edit `.env` (`nano .env`), then run `sudo docker compose up -d`. `curl localhost/api/health` shows which AI is in use.
 - **Logs**: `sudo docker compose logs -f`
 - **Update to the latest code**: `git pull && sudo docker compose up -d --build`

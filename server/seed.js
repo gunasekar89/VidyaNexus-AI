@@ -6,8 +6,8 @@ import { addDays, isoDate, parseDate, weekStart } from './dates.js'
 // Demo school: one teacher and four Class 7A students. Dates are relative to
 // the day the database is created, so the dashboard always looks "live".
 export const demoAccounts = {
-  student: { email: demoStudent.email, password: process.env.DEMO_STUDENT_PASSWORD || 'ananya123' },
-  teacher: { email: 'lakshmi.r@vidyanexus.school', password: process.env.DEMO_TEACHER_PASSWORD || 'teacher123' },
+  student: { email: demoStudent.email, password: process.env.DEMO_STUDENT_PASSWORD || 'jason123' },
+  teacher: { email: 'dola.ramesh@vidyanexus.school', password: process.env.DEMO_TEACHER_PASSWORD || 'teacher123' },
 }
 
 const classmates = [
@@ -107,12 +107,12 @@ export function seedIfEmpty() {
   transaction(() => {
     const { lastInsertRowid: teacherId } = run(
       `INSERT INTO users (email, password_hash, role, name, first_name_en, first_name_kn, phone)
-       VALUES (?, ?, 'teacher', 'Mrs. Lakshmi R.', 'Lakshmi', 'ಲಕ್ಷ್ಮೀ', '+91 98440 55667')`,
+       VALUES (?, ?, 'teacher', 'Dola Ramesh', 'Dola', 'ದೋಲಾ', '+91 98440 55667')`,
       demoAccounts.teacher.email,
       hashPassword(demoAccounts.teacher.password),
     )
 
-    const ananya = addStudent({
+    const jason = addStudent({
       name: demoStudent.name,
       first: demoStudent.firstName,
       email: demoAccounts.student.email,
@@ -120,9 +120,8 @@ export function seedIfEmpty() {
       roll: demoStudent.rollNo,
       guardian: demoStudent.guardian,
       phone: demoStudent.phone,
-      avatar: 'ananya',
     })
-    seedStudentHistory(ananya, rng(7), {
+    seedStudentHistory(jason, rng(7), {
       chapters: { mathematics: 4, science: 3, english: 3, 'social-science': 2, kannada: 2, 'computer-science': 2 },
       absentRate: 0.05,
       streak: true,

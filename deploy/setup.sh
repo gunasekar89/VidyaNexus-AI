@@ -82,5 +82,5 @@ public_ip=$(curl -fs --max-time 3 https://checkip.amazonaws.com 2>/dev/null || h
 say "Done! VidyaNexus is running."
 echo "  On this machine:  http://localhost:${port}"
 echo "  From outside:     http://${public_ip}:${port}   (on a cloud VM with the port open; on KodeKloud playgrounds use View Port, or deploy/KODEKLOUD.md → public link)"
-echo "  Demo logins:      ananya.s@vidyanexus.school / ananya123   and   lakshmi.r@vidyanexus.school / teacher123"
+echo "  Demo logins:      jason@vidyanexus.school / jason123   and   dola.ramesh@vidyanexus.school / teacher123"
 echo "  Logs:             $SUDO docker compose logs -f"

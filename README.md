@@ -16,8 +16,8 @@ Demo logins (shown on the login page until their passwords are changed):
 
 | Role | Email | Password |
 | --- | --- | --- |
-| Student | `ananya.s@vidyanexus.school` | `ananya123` |
-| Teacher | `lakshmi.r@vidyanexus.school` | `teacher123` |
+| Student | `jason@vidyanexus.school` | `jason123` |
+| Teacher | `dola.ramesh@vidyanexus.school` | `teacher123` |
 
 Three more students (Rahul, Meera, Arjun) use `student123`.
 
