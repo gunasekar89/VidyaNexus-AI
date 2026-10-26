@@ -59,11 +59,20 @@ The **Ubuntu 22.04 / Ubuntu playground** works the same way; the script installs
 - **Start over with fresh demo data**: `sudo docker compose down -v && sudo docker compose up -d`
 - **Data** lives in the Docker volume `vidyanexus-data` (an SQLite file), so it survives restarts and rebuilds on the same machine.
 
+## A public link from any playground
+
+If the playground has no port option, this gives a temporary `https://….trycloudflare.com` link (no account needed) that works while the playground is running:
+
+```bash
+sudo docker run -d --name tunnel --network host cloudflare/cloudflared tunnel --url http://localhost:80
+sleep 8; sudo docker logs tunnel 2>&1 | grep -o 'https://[a-z0-9-]*\.trycloudflare\.com'
+```
+
 ## Troubleshooting
 
 | Problem | Fix |
 | --- | --- |
-| Page doesn't open from outside | Check port 80 is open (AWS security group *Inbound rules*). |
+| Page doesn't open from outside | On AWS, check port 80 is open (security group *Inbound rules*). On the Docker/Ubuntu playgrounds the printed IP is not reachable: use the playground's **View Port** option with port 80, or get a free public link (below). |
 | `port is already allocated` | Something else uses port 80. Set `APP_PORT=8080` in `.env`, run `sudo docker compose up -d`, and open port 8080 instead. |
 | AI Tutor says "offline mode" | `.env` has no AI settings. Add the `AZURE_OPENAI_*` values (or `ANTHROPIC_API_KEY`) and run `sudo docker compose up -d`. |
 | AI Tutor says the key isn't valid | Re-copy the Azure key (Azure playgrounds expire, so a new session means a new resource and key), or the Anthropic key. |

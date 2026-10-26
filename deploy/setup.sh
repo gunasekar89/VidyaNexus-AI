@@ -81,6 +81,6 @@ curl -fs "http://localhost:${port}/api/health" && echo
 public_ip=$(curl -fs --max-time 3 https://checkip.amazonaws.com 2>/dev/null || hostname -I | awk '{print $1}')
 say "Done! VidyaNexus is running."
 echo "  On this machine:  http://localhost:${port}"
-echo "  From outside:     http://${public_ip}:${port}   (the port must be open in the firewall / security group)"
+echo "  From outside:     http://${public_ip}:${port}   (on a cloud VM with the port open; on KodeKloud playgrounds use View Port, or deploy/KODEKLOUD.md → public link)"
 echo "  Demo logins:      ananya.s@vidyanexus.school / ananya123   and   lakshmi.r@vidyanexus.school / teacher123"
 echo "  Logs:             $SUDO docker compose logs -f"
