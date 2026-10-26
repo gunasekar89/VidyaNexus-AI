@@ -1,4 +1,4 @@
-import { BarChart3, BookOpen, CalendarDays, ClipboardList, FileText, Home, Megaphone, School, Sparkles, UserRound, Users } from 'lucide-react'
+import { BarChart3, BookOpen, CalendarDays, ClipboardList, FileText, Home, Megaphone, School, Sparkles, Trophy, UserRound, Users } from 'lucide-react'
 
 export const navItems = [
   { to: '/', key: 'dashboard', icon: Home, end: true },
@@ -10,6 +10,7 @@ export const navItems = [
   { to: '/attendance', key: 'attendance', icon: Users },
   { to: '/announcements', key: 'announcements', icon: Megaphone },
   { to: '/progress', key: 'progress', icon: BarChart3 },
+  { to: '/awards', key: 'awards', icon: Trophy },
 ]
 
 export const bottomNavItems = [

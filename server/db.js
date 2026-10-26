@@ -128,6 +128,18 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   content TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE TABLE IF NOT EXISTS awards (
+  id INTEGER PRIMARY KEY,
+  student_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title_en TEXT NOT NULL, title_kn TEXT NOT NULL,
+  note_en TEXT NOT NULL DEFAULT '', note_kn TEXT NOT NULL DEFAULT '',
+  category TEXT NOT NULL DEFAULT 'academic',
+  level TEXT NOT NULL DEFAULT 'school',
+  medal TEXT NOT NULL DEFAULT 'special',
+  award_date TEXT NOT NULL,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 CREATE TABLE IF NOT EXISTS notification_reads (
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   key TEXT NOT NULL,

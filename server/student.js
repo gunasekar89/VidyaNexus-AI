@@ -1,4 +1,4 @@
-import { subjectById, subjects } from '../shared/catalog.js'
+import { awardMedals, subjectById, subjects } from '../shared/catalog.js'
 import { all, one } from './db.js'
 import { addDays, isoDate, weekStart } from './dates.js'
 
@@ -43,6 +43,20 @@ export const toHomework = (h) => ({
 
 export const toResult = (r) => ({ id: r.id, studentId: r.student_id, subject: r.subject, name: bi(r, 'name'), score: r.score, max: r.max, createdAt: r.created_at })
 
+export const toAward = (a) => ({
+  id: a.id,
+  studentId: a.student_id,
+  title: bi(a, 'title'),
+  note: bi(a, 'note'),
+  category: a.category,
+  level: a.level,
+  medal: a.medal,
+  date: a.award_date,
+  createdAt: a.created_at.replace(' ', 'T') + 'Z',
+})
+
+export const studentAwards = (studentId) => all('SELECT * FROM awards WHERE student_id = ? ORDER BY award_date DESC, id DESC', studentId).map(toAward)
+
 export const toPlan = (p) =>
   p && { id: p.id, title: bi(p, 'title'), summary: bi(p, 'summary'), steps: JSON.parse(p.steps), source: p.source, createdAt: p.created_at.replace(' ', 'T') + 'Z' }
 
@@ -61,7 +75,7 @@ export function upcomingExams() {
   return all('SELECT * FROM exams WHERE exam_date >= ? ORDER BY exam_date, id', isoDate()).map(toExam)
 }
 
-function notifications(userId, homework, announcements, plan) {
+function notifications(userId, homework, announcements, plan, awards) {
   const today = isoDate()
   const tomorrow = addDays(today, 1)
   const list = []
@@ -73,6 +87,11 @@ function notifications(userId, homework, announcements, plan) {
   const recent = new Date(Date.now() - 4 * 864e5).toISOString()
   for (const a of announcements.filter((a) => a.createdAt >= recent)) {
     list.push({ key: `ann:${a.id}`, text: { en: `New announcement: ${a.title.en}`, kn: `ಹೊಸ ಪ್ರಕಟಣೆ: ${a.title.kn}` }, at: a.createdAt, to: '/announcements' })
+  }
+  const lastWeek = new Date(Date.now() - 7 * 864e5).toISOString()
+  for (const a of awards.filter((a) => a.createdAt >= lastWeek)) {
+    const medal = awardMedals[a.medal]?.icon ?? '🏆'
+    list.push({ key: `award:${a.id}`, text: { en: `${medal} You received an award: ${a.title.en}`, kn: `${medal} ನಿಮಗೆ ಪ್ರಶಸ್ತಿ ಬಂದಿದೆ: ${a.title.kn}` }, at: a.createdAt, to: '/awards' })
   }
   if (plan && plan.source === 'ai') {
     list.push({
@@ -96,6 +115,7 @@ export function studentOverview(user) {
   const homework = studentHomework(id)
   const announcements = all('SELECT * FROM announcements ORDER BY created_at DESC, id DESC').map(toAnnouncement)
   const plan = latestPlan(id)
+  const awards = studentAwards(id)
 
   const chapters = {}
   for (const row of all('SELECT subject, chapter_index FROM chapter_progress WHERE student_id = ?', id)) {
@@ -130,7 +150,8 @@ export function studentOverview(user) {
       total: t.total,
       createdAt: t.created_at.replace(' ', 'T') + 'Z',
     })),
-    notifications: notifications(id, homework, announcements, plan),
+    awards,
+    notifications: notifications(id, homework, announcements, plan, awards),
   }
 }
 
@@ -154,6 +175,9 @@ export function studentContext(user) {
   const results = all('SELECT * FROM results WHERE student_id = ? ORDER BY created_at DESC LIMIT 8', id).map(
     (r) => `- ${subjectById[r.subject]?.name.en} ${r.name_en}: ${r.score}/${r.max}`,
   )
+  const awards = studentAwards(id)
+    .slice(0, 5)
+    .map((a) => `- ${a.title.en} (${awardMedals[a.medal]?.en}, ${a.level} level, ${a.date})`)
   return [
     `Student: ${user.first_name_en}, ${user.class_name_en}, ${user.school_en}. Today is ${today}.`,
     'Subjects:',
@@ -164,5 +188,7 @@ export function studentContext(user) {
     ...(pending.length ? pending : ['- none']),
     'Recent marks:',
     ...(results.length ? results : ['- none yet']),
+    'Awards:',
+    ...(awards.length ? awards : ['- none yet']),
   ].join('\n')
 }

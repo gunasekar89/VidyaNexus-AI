@@ -1,20 +1,8 @@
 import { useApp } from '../AppContext'
-import { badges } from '../../shared/catalog'
-import { currentMonthPct } from '../lib/attendance'
+import { earnedBadges, studyStreak } from '../lib/achievements'
 import { addDays, dateLabel, isoDate } from '../lib/dates'
 import { Card, PageHeader, ProgressBar, SubjectIcon } from '../components/ui'
-
-// Consecutive days with study time, counting back from today (or yesterday if today has none yet).
-function studyStreak(byDate) {
-  let day = isoDate()
-  if (!byDate[day]) day = addDays(day, -1)
-  let streak = 0
-  while (byDate[day] > 0) {
-    streak++
-    day = addDays(day, -1)
-  }
-  return streak
-}
+import BadgeGrid from '../components/BadgeGrid'
 
 export default function Progress() {
   const { t, tr, data, subjects } = useApp()
@@ -28,14 +16,8 @@ export default function Progress() {
   const totalMins = week.reduce((sum, d) => sum + d.mins, 0)
   const maxMins = Math.max(1, ...week.map((d) => d.mins))
   const overall = subjects.length ? Math.round(subjects.reduce((sum, s) => sum + s.progress, 0) / subjects.length) : 0
-  const streak = studyStreak(byDate)
-
-  const earned = {
-    streak: streak >= 7,
-    algebra: data.attempts.some((a) => a.score >= 4),
-    bookworm: (data.chapters.english ?? []).length >= 3,
-    ontime: (currentMonthPct(data.attendance) ?? 0) >= 90,
-  }
+  const streak = studyStreak(data.studyLog)
+  const earned = earnedBadges(data)
 
   const kpis = [
     { label: t('overall'), value: `${overall}%`, tone: 'text-brand-700' },
@@ -89,18 +71,7 @@ export default function Progress() {
         </Card>
         <Card className="p-5 lg:col-span-2">
           <h2 className="mb-4 font-semibold text-ink">{t('badges')}</h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {badges.map((b) => (
-              <div
-                key={b.id}
-                className={`flex flex-col items-center gap-2 rounded-2xl p-4 text-center ${earned[b.id] ? 'bg-gradient-to-br from-brand-50 to-violet-50' : 'bg-slate-50 opacity-60 grayscale'}`}
-              >
-                <span className="text-3xl">{b.icon}</span>
-                <span className="text-sm font-medium text-ink">{tr(b.label)}</span>
-                <span className="text-[11px] text-muted">{earned[b.id] ? t('earned') : tr(b.hint)}</span>
-              </div>
-            ))}
-          </div>
+          <BadgeGrid earned={earned} />
         </Card>
       </div>
     </div>

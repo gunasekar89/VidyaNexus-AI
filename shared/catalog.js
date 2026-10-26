@@ -162,6 +162,32 @@ export const badges = [
   { id: 'ontime', icon: '⏰', label: { en: 'Always On Time', kn: 'ಸಮಯಪಾಲಕ' }, hint: { en: '90% attendance this month', kn: 'ಈ ತಿಂಗಳು 90% ಹಾಜರಾತಿ' } },
 ]
 
+// Awards that teachers give students (prizes, competitions, recognition).
+export const awardCategories = {
+  academic: { icon: '📘', en: 'Academic', kn: 'ಶೈಕ್ಷಣಿಕ' },
+  sports: { icon: '⚽', en: 'Sports', kn: 'ಕ್ರೀಡೆ' },
+  arts: { icon: '🎨', en: 'Arts & culture', kn: 'ಕಲೆ ಮತ್ತು ಸಂಸ್ಕೃತಿ' },
+  conduct: { icon: '🌟', en: 'Conduct & leadership', kn: 'ನಡತೆ ಮತ್ತು ನಾಯಕತ್ವ' },
+  other: { icon: '🎖️', en: 'Other', kn: 'ಇತರೆ' },
+}
+
+// Ordered from smallest to biggest stage.
+export const awardLevels = {
+  class: { en: 'Class', kn: 'ತರಗತಿ' },
+  school: { en: 'School', kn: 'ಶಾಲೆ' },
+  district: { en: 'District', kn: 'ಜಿಲ್ಲೆ' },
+  state: { en: 'State', kn: 'ರಾಜ್ಯ' },
+  national: { en: 'National', kn: 'ರಾಷ್ಟ್ರೀಯ' },
+}
+
+export const awardMedals = {
+  gold: { icon: '🥇', en: '1st place', kn: 'ಪ್ರಥಮ ಸ್ಥಾನ' },
+  silver: { icon: '🥈', en: '2nd place', kn: 'ದ್ವಿತೀಯ ಸ್ಥಾನ' },
+  bronze: { icon: '🥉', en: '3rd place', kn: 'ತೃತೀಯ ಸ್ಥಾನ' },
+  special: { icon: '🏆', en: 'Special award', kn: 'ವಿಶೇಷ ಪ್ರಶಸ್ತಿ' },
+  participation: { icon: '🎗️', en: 'Participation', kn: 'ಭಾಗವಹಿಸುವಿಕೆ' },
+}
+
 // Starter revision plan, used until the AI coach makes a personalised one.
 export const defaultRevisionPlan = [
   { day: { en: 'Day 1', kn: 'ದಿನ 1' }, task: { en: 'Revise Ch 4 – Simple Equations (20 min)', kn: 'ಅಧ್ಯಾಯ 4 ಪುನರಾವರ್ತನೆ – ಸರಳ ಸಮೀಕರಣ (20 ನಿಮಿಷ)' } },
