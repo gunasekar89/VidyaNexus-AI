@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronRight, KeyRound, LogOut } from 'lucide-react'
+import { ArrowLeftRight, ChevronRight, KeyRound, LogOut } from 'lucide-react'
 import { useApp } from '../AppContext'
 import { api } from '../api'
 import { Card, PageHeader } from '../components/ui'
-import { Avatar, LanguageToggle } from '../components/Layout'
+import { Avatar, LanguageToggle, useWorkspaceLabel } from '../components/Layout'
 import { navFor } from '../components/nav'
 
 function PasswordForm() {
@@ -50,10 +50,14 @@ function PasswordForm() {
 }
 
 export default function Profile() {
-  const { t, tr, user, logout } = useApp()
+  const { t, tr, user, logout, workspace, workspaces } = useApp()
   const student = user.role === 'student'
+  const subtitle = useWorkspaceLabel()
+  const { navItems, bottomNavItems } = navFor(user.role, workspace, workspace?.permissions)
+  // On mobile, pages not in the bottom bar are reachable from here.
+  const extraPages = navItems.filter((i) => !bottomNavItems.some((b) => b.to === i.to) && i.to !== '/profile')
   const rows = [
-    { label: t('school'), value: tr(user.school) },
+    { label: t('school'), value: workspace?.school ? tr(workspace.school.name) : workspace?.group?.name ?? tr(user.school) },
     ...(student
       ? [
           { label: t('rollNo'), value: user.rollNo || '—' },
@@ -69,7 +73,7 @@ export default function Profile() {
         <Avatar className="h-16 w-16 text-2xl" />
         <div className="flex-1">
           <div className="text-xl font-bold text-ink">{user.name}</div>
-          <div className="text-sm text-muted">{student ? tr(user.className) : t('teacherRole')}</div>
+          <div className="text-sm text-muted">{subtitle}</div>
         </div>
       </Card>
       <Card className="mb-4 divide-y divide-slate-100">
@@ -84,11 +88,16 @@ export default function Profile() {
           <LanguageToggle compact />
         </div>
       </Card>
-      {/* On mobile, pages not in the bottom bar are reachable from here. */}
-      {student && (
+      {workspaces.length > 1 && (
+        <Link to="/workspaces" className="mb-4 flex items-center gap-3 rounded-2xl bg-white px-5 py-3.5 text-sm font-medium text-ink shadow-card">
+          <ArrowLeftRight size={18} className="text-brand-600" />
+          <span className="flex-1">{t('switchWorkspace')}</span>
+          <ChevronRight size={16} className="text-slate-400" />
+        </Link>
+      )}
+      {extraPages.length > 0 && (
         <Card className="mb-4 divide-y divide-slate-100 lg:hidden">
-          {navFor('student')
-            .navItems.slice(1)
+          {extraPages
             .map(({ to, key, icon: Icon }) => (
               <Link key={to} to={to} className="flex items-center gap-3 px-5 py-3.5 text-sm text-ink">
                 <Icon size={18} className="text-brand-600" />

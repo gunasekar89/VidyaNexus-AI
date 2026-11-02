@@ -55,24 +55,36 @@ export const toAward = (a) => ({
   createdAt: a.created_at.replace(' ', 'T') + 'Z',
 })
 
-export const studentAwards = (studentId) => all('SELECT * FROM awards WHERE student_id = ? ORDER BY award_date DESC, id DESC', studentId).map(toAward)
+export const studentAwards = (studentId, scope) =>
+  all('SELECT * FROM awards WHERE student_id = ? AND school_id = ? ORDER BY award_date DESC, id DESC', studentId, scope.schoolId).map(toAward)
 
 export const toPlan = (p) =>
   p && { id: p.id, title: bi(p, 'title'), summary: bi(p, 'summary'), steps: JSON.parse(p.steps), source: p.source, createdAt: p.created_at.replace(' ', 'T') + 'Z' }
 
-export function studentHomework(studentId) {
+// scope = { schoolId, sectionId } from the student's verified enrollment. Shared
+// records are visible only inside the student's own school and section.
+const IN_SCOPE = 'school_id = :school AND (section_id IS NULL OR section_id = :section)'
+const scopeParams = (scope) => ({ school: scope.schoolId, section: scope.sectionId })
+
+export function studentHomework(studentId, scope) {
   return all(
     `SELECT h.*, (s.student_id IS NOT NULL) AS done FROM homework h
-     LEFT JOIN homework_status s ON s.homework_id = h.id AND s.student_id = ?
+     LEFT JOIN homework_status s ON s.homework_id = h.id AND s.student_id = :student
+     WHERE h.school_id = :school AND (h.section_id IS NULL OR h.section_id = :section)
      ORDER BY h.due_date, h.id`,
-    studentId,
+    { ...scopeParams(scope), student: studentId },
   ).map(toHomework)
 }
 
+export const scopedAnnouncements = (scope) =>
+  all(`SELECT * FROM announcements WHERE ${IN_SCOPE} ORDER BY created_at DESC, id DESC`, scopeParams(scope)).map(toAnnouncement)
+
+export const homeworkInScope = (homeworkId, scope) => one(`SELECT id FROM homework WHERE id = :id AND ${IN_SCOPE}`, { ...scopeParams(scope), id: homeworkId })
+
 export const latestPlan = (studentId) => toPlan(one('SELECT * FROM plans WHERE student_id = ? ORDER BY id DESC LIMIT 1', studentId))
 
-export function upcomingExams() {
-  return all('SELECT * FROM exams WHERE exam_date >= ? ORDER BY exam_date, id', isoDate()).map(toExam)
+export function upcomingExams(scope) {
+  return all(`SELECT * FROM exams WHERE exam_date >= :today AND ${IN_SCOPE} ORDER BY exam_date, id`, { ...scopeParams(scope), today: isoDate() }).map(toExam)
 }
 
 function notifications(userId, homework, announcements, plan, awards) {
@@ -109,13 +121,13 @@ function notifications(userId, homework, announcements, plan, awards) {
 }
 
 // Everything the student app needs, in one payload.
-export function studentOverview(user) {
+export function studentOverview(user, scope) {
   const id = user.id
   const today = isoDate()
-  const homework = studentHomework(id)
-  const announcements = all('SELECT * FROM announcements ORDER BY created_at DESC, id DESC').map(toAnnouncement)
+  const homework = studentHomework(id, scope)
+  const announcements = scopedAnnouncements(scope)
   const plan = latestPlan(id)
-  const awards = studentAwards(id)
+  const awards = studentAwards(id, scope)
 
   const chapters = {}
   for (const row of all('SELECT subject, chapter_index FROM chapter_progress WHERE student_id = ?', id)) {
@@ -123,7 +135,7 @@ export function studentOverview(user) {
   }
 
   const attendance = {}
-  for (const row of all('SELECT date, status FROM attendance WHERE student_id = ? AND date >= ?', id, addDays(today, -400))) {
+  for (const row of all('SELECT date, status FROM attendance WHERE student_id = ? AND school_id = ? AND date >= ?', id, scope.schoolId, addDays(today, -400))) {
     attendance[row.date] = row.status
   }
 
@@ -136,8 +148,8 @@ export function studentOverview(user) {
       done: Boolean(g.done),
     })),
     announcements,
-    exams: upcomingExams(),
-    results: all('SELECT * FROM results WHERE student_id = ? ORDER BY created_at DESC, id DESC LIMIT 30', id).map(toResult),
+    exams: upcomingExams(scope),
+    results: all('SELECT * FROM results WHERE student_id = ? AND school_id = ? ORDER BY created_at DESC, id DESC LIMIT 30', id, scope.schoolId).map(toResult),
     attendance,
     studyLog: all('SELECT date, minutes FROM study_log WHERE student_id = ? AND date >= ? ORDER BY date', id, addDays(today, -60)),
     chapters,
@@ -156,7 +168,7 @@ export function studentOverview(user) {
 }
 
 // A compact, factual summary of the student's situation for the AI tutor and coach.
-export function studentContext(user) {
+export function studentContext(user, scope) {
   const id = user.id
   const done = {}
   for (const row of all('SELECT subject, chapter_index FROM chapter_progress WHERE student_id = ?', id)) {
@@ -168,14 +180,14 @@ export function studentContext(user) {
     return `- ${s.name.en} (teacher ${s.teacher}): ${finished}/${s.chapters.length} chapters done${current ? `, now studying "${current.en}"` : ''}`
   })
   const today = isoDate()
-  const exams = upcomingExams().map((e) => `- ${subjectById[e.subject]?.name.en} ${e.name.en} on ${e.date} (syllabus: ${e.syllabus.en})`)
-  const pending = studentHomework(id)
+  const exams = upcomingExams(scope).map((e) => `- ${subjectById[e.subject]?.name.en} ${e.name.en} on ${e.date} (syllabus: ${e.syllabus.en})`)
+  const pending = studentHomework(id, scope)
     .filter((h) => !h.done && h.dueDate >= today)
     .map((h) => `- ${h.title.en}: ${h.detail.en}, due ${h.dueDate}`)
-  const results = all('SELECT * FROM results WHERE student_id = ? ORDER BY created_at DESC LIMIT 8', id).map(
+  const results = all('SELECT * FROM results WHERE student_id = ? AND school_id = ? ORDER BY created_at DESC LIMIT 8', id, scope.schoolId).map(
     (r) => `- ${subjectById[r.subject]?.name.en} ${r.name_en}: ${r.score}/${r.max}`,
   )
-  const awards = studentAwards(id)
+  const awards = studentAwards(id, scope)
     .slice(0, 5)
     .map((a) => `- ${a.title.en} (${awardMedals[a.medal]?.en}, ${a.level} level, ${a.date})`)
   return [
