@@ -60,7 +60,8 @@ function shape(raw) {
 
 export function AppProvider({ children }) {
   const [lang, setLangState] = useState(readLang)
-  const [auth, setAuth] = useState({ status: 'loading', user: null, aiEnabled: false })
+  // user.role follows the active workspace ('student', 'teacher', 'guardian', 'admin', 'staff' or 'none').
+  const [auth, setAuth] = useState({ status: 'loading', user: null, aiEnabled: false, workspaces: [], active: null, portal: null })
   const [raw, setRaw] = useState(null)
   const [loadError, setLoadError] = useState(null)
   const [toast, setToast] = useState(null)
@@ -97,14 +98,15 @@ export function AppProvider({ children }) {
       setRaw(await api('/student/overview'))
       setLoadError(null)
     } catch (err) {
-      if (err.status === 401) setAuth({ status: 'ready', user: null, aiEnabled: false })
+      if (err.status === 401) setAuth({ status: 'ready', user: null, aiEnabled: false, workspaces: [], active: null, portal: null })
       else setLoadError(err)
     }
   }, [])
 
   const signedIn = useCallback(
-    ({ user, aiEnabled }) => {
-      setAuth({ status: 'ready', user, aiEnabled })
+    ({ user, aiEnabled, workspaces = [], active = null, portal = null }) => {
+      setRaw(null)
+      setAuth({ status: 'ready', user, aiEnabled, workspaces, active, portal })
       if (user.lang) setLangState(user.lang)
       if (user.role === 'student') refresh()
     },
@@ -114,11 +116,12 @@ export function AppProvider({ children }) {
   useEffect(() => {
     api('/me')
       .then(signedIn)
-      .catch(() => setAuth({ status: 'ready', user: null, aiEnabled: false }))
+      .catch(() => setAuth({ status: 'ready', user: null, aiEnabled: false, workspaces: [], active: null, portal: null }))
   }, [signedIn])
 
-  const login = async (email, password) => {
-    const res = await api('/auth/login', { method: 'POST', body: { email, password } })
+  // portal is the entry card the person chose; it only steers which workspace opens first.
+  const login = async (identifier, password, { portal, institution } = {}) => {
+    const res = await api('/auth/login', { method: 'POST', body: { identifier, password, portal, institution } })
     // Keep the language picked on the login screen.
     if (res.user.lang !== lang) {
       api('/me', { method: 'PATCH', body: { lang } }).catch(() => {})
@@ -130,8 +133,17 @@ export function AppProvider({ children }) {
   const logout = async () => {
     await api('/auth/logout', { method: 'POST' }).catch(() => {})
     setRaw(null)
-    setAuth({ status: 'ready', user: null, aiEnabled: false })
+    setAuth({ status: 'ready', user: null, aiEnabled: false, workspaces: [], active: null, portal: null })
   }
+
+  // Opens one of the person's own memberships; admin workspaces need a 2-step code.
+  const switchWorkspace = async (membershipId, code) => {
+    const res = await api('/workspaces/active', { method: 'POST', body: { membershipId, code } })
+    signedIn(res)
+    return res
+  }
+
+  const reloadSession = () => api('/me').then(signedIn)
 
   const setLang = (next) => {
     setLangState(next)
@@ -213,6 +225,11 @@ export function AppProvider({ children }) {
     aiEnabled: auth.aiEnabled,
     login,
     logout,
+    switchWorkspace,
+    reloadSession,
+    workspaces: auth.workspaces,
+    workspace: auth.active,
+    portal: auth.portal,
     updateUser,
     data,
     loadError,

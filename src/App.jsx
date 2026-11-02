@@ -15,8 +15,14 @@ import AnnouncementsPage from './pages/AnnouncementsPage'
 import Progress from './pages/Progress'
 import Awards from './pages/Awards'
 import Profile from './pages/Profile'
+import Home from './pages/Home'
 import Login from './pages/Login'
+import { Invite, Recover, Reset } from './pages/Account'
+import WorkspacesPage, { WorkspaceGate } from './pages/Workspaces'
 import TeacherDesk from './pages/TeacherDesk'
+import Family from './pages/Family'
+import StaffHome from './pages/StaffHome'
+import { AdminOverview, Audit, Group, People, Setup, Staff, Students } from './pages/admin/Admin'
 
 function Splash() {
   return (
@@ -48,10 +54,46 @@ function StudentData() {
   return <Outlet />
 }
 
-export default function App() {
-  const { authStatus, user } = useApp()
-  if (authStatus === 'loading') return <Splash />
-  if (!user) return <Login />
+// Pages every signed-in workspace shares.
+const common = [
+  <Route key="profile" path="profile" element={<Profile />} />,
+  <Route key="workspaces" path="workspaces" element={<WorkspacesPage />} />,
+]
+
+function WorkspaceRoutes() {
+  const { user, workspace } = useApp()
+  const perms = new Set(workspace?.permissions ?? [])
+
+  if (user.role === 'admin') {
+    const groupLevel = !workspace.school
+    return (
+      <Routes>
+        <Route element={<Layout />}>
+          <Route index element={groupLevel ? <Group /> : <AdminOverview />} />
+          {perms.has('group.view') && <Route path="group" element={<Group />} />}
+          {!groupLevel && perms.has('members.view') && <Route path="people" element={<People />} />}
+          {!groupLevel && perms.has('students.view') && <Route path="students" element={<Students />} />}
+          {!groupLevel && perms.has('staff.view') && <Route path="staff" element={<Staff />} />}
+          {!groupLevel && <Route path="setup" element={<Setup />} />}
+          {!groupLevel && perms.has('audit.view') && <Route path="audit" element={<Audit />} />}
+          {common}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    )
+  }
+
+  if (user.role === 'guardian' || user.role === 'staff') {
+    return (
+      <Routes>
+        <Route element={<Layout />}>
+          <Route index element={user.role === 'guardian' ? <Family /> : <StaffHome />} />
+          {common}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    )
+  }
 
   if (user.role === 'teacher') {
     return (
@@ -59,7 +101,8 @@ export default function App() {
         <Route element={<Layout />}>
           <Route index element={<TeacherDesk />} />
           <Route path="announcements" element={<TeacherDesk tab="announcements" />} />
-          <Route path="profile" element={<Profile />} />
+          <Route path="my-work" element={<StaffHome />} />
+          {common}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
@@ -69,7 +112,7 @@ export default function App() {
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route path="profile" element={<Profile />} />
+        {common}
         <Route element={<StudentData />}>
           <Route index element={<Dashboard />} />
           <Route path="calendar" element={<SmartCalendar />} />
@@ -85,6 +128,31 @@ export default function App() {
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
+    </Routes>
+  )
+}
+
+export default function App() {
+  const { authStatus, user, workspace } = useApp()
+  if (authStatus === 'loading') return <Splash />
+
+  // Invitation and reset links work whether or not someone is signed in.
+  return (
+    <Routes>
+      <Route path="invite/:token" element={<Invite />} />
+      <Route path="reset/:token" element={<Reset />} />
+      {!user ? (
+        <>
+          <Route index element={<Home />} />
+          <Route path="login/:portal" element={<Login />} />
+          <Route path="recover" element={<Recover />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </>
+      ) : !workspace || user.role === 'none' ? (
+        <Route path="*" element={<WorkspaceGate />} />
+      ) : (
+        <Route path="*" element={<WorkspaceRoutes />} />
+      )}
     </Routes>
   )
 }

@@ -1,4 +1,5 @@
 import crypto from 'node:crypto'
+import { legacyRoleFor } from '../shared/roles.js'
 import { one, run } from './db.js'
 
 const SESSION_DAYS = 30
@@ -11,15 +12,27 @@ export function hashPassword(password) {
 }
 
 export function verifyPassword(password, stored) {
-  const [, salt, hash] = stored.split(':')
+  const [, salt, hash] = String(stored ?? '').split(':')
+  if (!salt || !hash) return false
   const candidate = crypto.scryptSync(password, salt, 64)
   return crypto.timingSafeEqual(candidate, Buffer.from(hash, 'hex'))
 }
 
-export function createSession(userId) {
+// Spends the same time as a real check when no account matched, so response
+// times don't reveal which emails, mobiles or IDs exist.
+const DUMMY_HASH = hashPassword(crypto.randomBytes(16).toString('hex'))
+export const burnPasswordCheck = (password) => verifyPassword(String(password ?? ''), DUMMY_HASH)
+
+export const sha256 = (s) => crypto.createHash('sha256').update(s).digest('hex')
+export const newToken = () => crypto.randomBytes(32).toString('base64url')
+
+export function createSession(userId, { portal = null } = {}) {
   const token = crypto.randomBytes(32).toString('hex')
   const expires = new Date(Date.now() + SESSION_DAYS * 864e5).toISOString()
-  run('INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)', token, userId, expires)
+  run(
+    'INSERT INTO sessions (token, user_id, expires_at, portal, created_at) VALUES (?, ?, ?, ?, ?)',
+    token, userId, expires, portal, new Date().toISOString(),
+  )
   return { token, expires }
 }
 
@@ -49,8 +62,8 @@ export function loadUser(req, _res, next) {
   const token = readCookie(req, COOKIE)
   if (token) {
     const row = one(
-      `SELECT u.*, s.token FROM sessions s JOIN users u ON u.id = s.user_id
-       WHERE s.token = ? AND s.expires_at > ?`,
+      `SELECT u.*, s.token, s.active_membership_id, s.mfa_at, s.portal FROM sessions s JOIN users u ON u.id = s.user_id
+       WHERE s.token = ? AND s.expires_at > ? AND u.disabled_at IS NULL`,
       token,
       new Date().toISOString(),
     )
@@ -60,8 +73,6 @@ export function loadUser(req, _res, next) {
 }
 
 export const requireUser = (req, res, next) => (req.user ? next() : res.status(401).json({ error: 'auth.required' }))
-export const requireRole = (role) => (req, res, next) =>
-  !req.user ? res.status(401).json({ error: 'auth.required' }) : req.user.role !== role ? res.status(403).json({ error: 'auth.forbidden' }) : next()
 
 // Small in-memory limiter, enough to slow down password guessing and protect the AI budget.
 export function rateLimit({ windowMs, max, key = (req) => req.ip }) {
@@ -77,11 +88,13 @@ export function rateLimit({ windowMs, max, key = (req) => req.ip }) {
   }
 }
 
-export function publicUser(u) {
+// ctx is the request's verified workspace; the legacy `role` the screens use
+// follows the active workspace, never the account row.
+export function publicUser(u, ctx) {
   return {
     id: u.id,
     email: u.email,
-    role: u.role,
+    role: ctx === undefined ? u.role : ctx ? legacyRoleFor(ctx.kind) : 'none',
     name: u.name,
     firstName: { en: u.first_name_en, kn: u.first_name_kn },
     className: { en: u.class_name_en, kn: u.class_name_kn },
@@ -91,5 +104,6 @@ export function publicUser(u) {
     phone: u.phone,
     avatar: u.avatar,
     lang: u.lang,
+    mfaEnabled: Boolean(u.mfa_enabled_at),
   }
 }

@@ -1,3 +1,5 @@
+import { adminStrings } from './i18n-admin'
+
 // UI strings for the EN / ಕನ್ನಡ toggle.
 export const strings = {
   en: {
@@ -471,3 +473,7 @@ export const strings = {
     'err.not.found': 'ಆ ಐಟಂ ಈಗ ಇಲ್ಲ.',
   },
 }
+
+// Sign-in, workspace and administration strings live in i18n-admin.js.
+Object.assign(strings.en, adminStrings.en)
+Object.assign(strings.kn, adminStrings.kn)

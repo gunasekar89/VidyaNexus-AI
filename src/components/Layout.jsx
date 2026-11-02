@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Bell, ChevronDown, LogOut, Search, Settings, UserRound } from 'lucide-react'
+import { ArrowLeftRight, Bell, ChevronDown, LogOut, Search, Settings, UserRound } from 'lucide-react'
 import { useApp } from '../AppContext'
 import { Logo } from './Logo'
 import { navFor } from './nav'
@@ -119,8 +119,18 @@ function NotificationsMenu({ small }) {
   )
 }
 
+// Role and school of the active workspace, e.g. "Principal · Vidya Public School".
+export function useWorkspaceLabel() {
+  const { t, tr, user, workspace } = useApp()
+  if (user.role === 'student') return tr(user.className)
+  if (user.role === 'teacher') return t('teacherRole')
+  if (!workspace) return ''
+  return tr(workspace.roleLabel)
+}
+
 function ProfileMenu() {
-  const { t, tr, user, logout } = useApp()
+  const { t, user, logout, workspaces } = useApp()
+  const subtitle = useWorkspaceLabel()
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
   useClickOutside(ref, () => setOpen(false))
@@ -130,7 +140,7 @@ function ProfileMenu() {
         <Avatar className="h-12 w-12" />
         <div className="text-left leading-tight">
           <div className="text-[15px] font-semibold text-ink">{user.name}</div>
-          <div className="text-[13px] text-muted">{user.role === 'teacher' ? t('teacherRole') : tr(user.className)}</div>
+          <div className="text-[13px] text-muted">{subtitle}</div>
         </div>
         <ChevronDown size={18} className="ml-3 text-slate-500" />
       </button>
@@ -142,6 +152,11 @@ function ProfileMenu() {
           <Link to="/profile" onClick={() => setOpen(false)} className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-ink hover:bg-slate-50">
             <Settings size={16} /> {t('settings')}
           </Link>
+          {workspaces.length > 1 && (
+            <Link to="/workspaces" onClick={() => setOpen(false)} className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-ink hover:bg-slate-50">
+              <ArrowLeftRight size={16} /> {t('switchWorkspace')}
+            </Link>
+          )}
           <button
             onClick={() => {
               setOpen(false)
@@ -158,9 +173,9 @@ function ProfileMenu() {
 }
 
 function Sidebar() {
-  const { t, homework, user } = useApp()
+  const { t, homework, user, workspace } = useApp()
   const pendingHomework = homework.filter((h) => !h.done && !h.project && h.due !== 'overdue').length
-  const { navItems } = navFor(user.role)
+  const { navItems } = navFor(user.role, workspace, workspace?.permissions)
   return (
     <aside className="sticky top-3 hidden h-[calc(100vh-1.5rem)] w-[236px] shrink-0 flex-col overflow-hidden rounded-3xl bg-white shadow-card lg:flex">
       <div className="px-6 pb-6 pt-5">
@@ -235,7 +250,7 @@ function Topbar({ onSearch }) {
 }
 
 function MobileHeader({ onSearch }) {
-  const { user } = useApp()
+  const { user, workspaces, t } = useApp()
   const student = user.role === 'student'
   return (
     <header className="sticky top-0 z-30 flex items-center gap-2 bg-canvas/90 px-4 pb-2 pt-3 backdrop-blur lg:hidden">
@@ -249,6 +264,11 @@ function MobileHeader({ onSearch }) {
           </button>
         )}
         <LanguageToggle compact />
+        {workspaces.length > 1 && (
+          <Link to="/workspaces" className="flex h-8 w-8 items-center justify-center rounded-full text-ink hover:bg-slate-100" aria-label={t('switchWorkspace')}>
+            <ArrowLeftRight size={18} />
+          </Link>
+        )}
         {student && <NotificationsMenu small />}
         <Link to="/profile">
           <Avatar className="h-8 w-8" />
@@ -259,8 +279,8 @@ function MobileHeader({ onSearch }) {
 }
 
 function BottomNav() {
-  const { t, user } = useApp()
-  const { bottomNavItems } = navFor(user.role)
+  const { t, user, workspace } = useApp()
+  const { bottomNavItems } = navFor(user.role, workspace, workspace?.permissions)
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-slate-100 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
       {bottomNavItems.map(({ to, key, icon: Icon, end }) => (
