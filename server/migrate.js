@@ -1,9 +1,10 @@
 import { all, db } from './db.js'
 import * as m001 from './migrations/001-baseline.js'
 import * as m002 from './migrations/002-identity-tenancy.js'
+import * as m003 from './migrations/003-operations.js'
 
 // Ordered list of schema migrations. Never edit one that has shipped; add a new one.
-export const migrations = [m001, m002]
+export const migrations = [m001, m002, m003]
 
 // Applies pending migrations, each in its own transaction. Foreign keys are
 // switched off while a migration rebuilds tables (SQLite's documented

@@ -3,6 +3,7 @@ import { createApp } from './app.js'
 import { run } from './db.js'
 import { migrate } from './migrate.js'
 import { demoAccounts, seedIfEmpty } from './seed.js'
+import { seedOperations } from './ops/seed.js'
 import { backfillLegacy, demoIdentities, seedDemoIdentities } from './tenancy.js'
 
 const PORT = Number(process.env.PORT || 3000)
@@ -18,6 +19,7 @@ if (seedDemoIdentities()) {
   console.log('Added demo people for the new roles:')
   for (const [k, a] of Object.entries(demoIdentities)) console.log(`  ${k.padEnd(16)} ${a.email} / ${a.password}`)
 }
+if (seedOperations()) console.log('Added demo data for admissions, fees, accounts, HR, transport, purchasing, library, reception, health and helpdesk.')
 run('DELETE FROM sessions WHERE expires_at < ?', new Date().toISOString())
 
 createApp().listen(PORT, () => {

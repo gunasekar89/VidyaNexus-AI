@@ -109,13 +109,15 @@ export function loadContext(req, _res, next) {
 
 export const legacyRole = (req) => (req.ctx ? legacyRoleFor(req.ctx.kind) : 'none')
 
-// Route guard: the active, verified membership must carry the permission.
+// Route guard: the active, verified membership must carry the permission (or,
+// given a list, at least one of them).
 export const requirePerm = (perm) => (req, res, next) => {
   if (!req.user) return res.status(401).json({ error: 'auth.required' })
   const ctx = req.ctx
   if (!ctx) return res.status(403).json({ error: 'workspace.required' })
   if (ctx.mfaPending) return res.status(403).json({ error: 'mfa.required' })
-  if (!ctx.perms.has(perm)) {
+  const list = Array.isArray(perm) ? perm : [perm]
+  if (!list.some((p) => ctx.perms.has(p))) {
     audit(req, 'access.denied', { outcome: 'denied', detail: { perm, path: req.originalUrl.split('?')[0] } })
     return res.status(403).json({ error: 'auth.forbidden' })
   }

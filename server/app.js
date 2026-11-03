@@ -4,6 +4,7 @@ import express from 'express'
 import { loadContext, requestId } from './access.js'
 import { loadUser } from './auth.js'
 import { identity } from './identity.js'
+import { ops, webhookHandler } from './ops/index.js'
 import { api, errorHandler } from './routes.js'
 
 // The Express app: security headers, session + workspace context, the API, and
@@ -22,7 +23,10 @@ export function createApp() {
   app.use(requestId)
   app.use(loadUser)
   app.use(loadContext)
+  // The payment webhook reads the raw body to check the gateway's signature.
+  app.post('/api/payments/webhook', express.raw({ type: '*/*', limit: '256kb' }), webhookHandler)
   app.use('/api', identity)
+  app.use('/api', ops)
   app.use('/api', api)
   app.use('/api', errorHandler)
 
