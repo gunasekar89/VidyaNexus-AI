@@ -55,7 +55,8 @@ export default function Profile() {
   const subtitle = useWorkspaceLabel()
   const { navItems, bottomNavItems } = navFor(user.role, workspace, workspace?.permissions)
   // On mobile, pages not in the bottom bar are reachable from here.
-  const extraPages = navItems.filter((i) => !bottomNavItems.some((b) => b.to === i.to) && i.to !== '/profile')
+  // Other workspaces have a "More" page in the bottom bar instead.
+  const extraPages = student ? navItems.filter((i) => !bottomNavItems.some((b) => b.to === i.to) && i.to !== '/profile') : []
   const rows = [
     { label: t('school'), value: workspace?.school ? tr(workspace.school.name) : workspace?.group?.name ?? tr(user.school) },
     ...(student

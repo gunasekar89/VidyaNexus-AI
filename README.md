@@ -1,7 +1,7 @@
 # VidyaNexus-AI
 Smart Learning for Every School Day
 
-A bilingual (English / ಕನ್ನಡ) school platform: a learning app for students and teachers with a real AI tutor (Azure OpenAI or Claude), now growing into school administration. The home page offers three entry cards (Corporate / School Administration, Student / Parent, Teacher / Staff); what each person can do comes from the roles their school gave them, checked on the server on every request. Students see their timetable, homework, goals, tests, attendance and progress; teachers set homework, post announcements, schedule exams, enter marks, take attendance and add students. Everything is saved in a database.
+A bilingual (English / ಕನ್ನಡ) school platform: a learning app for students and teachers with a real AI tutor (Azure OpenAI or Claude), with a school office built in: admissions, fees and receipts, accounts, leave and payroll, transport, purchasing and stores, library, reception, health and safeguarding, messages and helpdesk. The home page offers three entry cards (Corporate / School Administration, Student / Parent, Teacher / Staff); what each person can do comes from the roles their school gave them, checked on the server on every request. Students see their timetable, homework, goals, tests, attendance and progress; teachers set homework, post announcements, schedule exams, enter marks, take attendance and add students. Everything is saved in a database.
 
 ## Run it with Docker (recommended)
 
@@ -24,8 +24,16 @@ Demo logins (shown on each sign-in page until their passwords are changed; all d
 | Administration | Trustee Ravi Shankar (school group) | `trustee@vidyanexus.school` | `admin1234` + 2-step code |
 | Administration | HR officer Farah Khan (sees pay) | `hr@vidyanexus.school` | `admin1234` + 2-step code |
 | Admin + parent | Kiran M., accountant and Rahul's father (two roles) | `kiran.m@vidyanexus.school` | `admin1234` (+ code for the accountant role) |
+| Administration | Receptionist Lakshmi N. (visitors, pickups, admissions, helpdesk) | `reception@vidyanexus.school` | `admin1234` + 2-step code |
+| Administration | Safeguarding lead Meera Iyer | `safeguarding@vidyanexus.school` | `admin1234` + 2-step code |
+| Teacher / Staff | School nurse Anita D'Souza | `nurse@vidyanexus.school` or `EMP-0301` + `VPS-BLR` | `staff1234` |
+| Teacher / Staff | Librarian Prakash H. | `librarian@vidyanexus.school` or `EMP-0302` + `VPS-BLR` | `staff1234` |
+| Teacher / Staff | Stores keeper Raju P. | `stores@vidyanexus.school` or `EMP-0303` + `VPS-BLR` | `staff1234` |
+| Teacher / Staff | Bus attendant Savitha R. (route 4, with the driver) | `savitha.r@vidyanexus.school` or `EMP-0202` + `VPS-BLR` | `staff1234` |
 
 Administration roles need a 2-step code from an authenticator app. For the demo accounts the sign-in page shows the current code, because a demo has no phone to scan with. Three more students (Rahul, Meera, Arjun) use `student123`. A second, separate school (Sahyadri Public School, Mysuru: `asha.k@sahyadri.school` / `teacher123`, `nikhil@sahyadri.school` / `student123`) exists to show that schools can't see each other's data.
+
+A good tour: sign in as the principal and open **Waiting for you** (a fee concession, leave, payroll, a purchase request and a helpdesk request are waiting), then as Suresh to pay Jason's fees online in test mode, then as the driver on a phone to start a trip and mark children on and off the bus.
 
 Upgrading from an earlier version keeps your data: on start-up the database is migrated and existing students, teachers and records are attached to the demo school.
 
@@ -41,7 +49,7 @@ npm run dev                                       # web app on http://localhost:
 
 `npm run build && npm start` serves the built app and API together on port 3000.
 
-`npm test` runs the access-control and migration tests (Node's built-in test runner, no extra tools).
+`npm test` runs the access-control, migration and office-module tests (Node's built-in test runner, no extra tools). `npm run check:i18n` fails if any text on screen is missing its English or Kannada version.
 
 ## AI settings
 
@@ -62,11 +70,25 @@ If both are set, `AI_PROVIDER=azure` or `AI_PROVIDER=anthropic` picks one (Claud
 **School administration**
 - Overview (enrolment, classes, staff, linked parents, today's attendance), people and roles with invitations, student register, staff directory (pay visible only to HR and payroll), school setup (campuses, academic and financial years, terms, departments, classes), audit log, and a group view for school owners.
 
+**School office** (each part opens only for the roles that do that work)
+- **Waiting for you**: one list of everything the signed-in person must decide, across modules, with an inbox and unread badge.
+- **Admissions**: enquiry → application → document checks → offer → acceptance → enrollment, with duplicate warnings; enrolling creates the student, the verified parent link and the year's fees once.
+- **Fees**: fee heads and instalment plans per class, student accounts, counter payments with printable receipts, cheque bounces and reconciliation, concessions and refunds approved by a second person, reminders, and online payment in test mode (no real money moves until the school connects a payment gateway).
+- **Accounts**: double-entry books filled automatically from fees, payroll and purchases, manual journals approved by someone else, reversals instead of edits, month locks and a trial balance.
+- **Leave and payroll**: leave balances, requests and approvals; payroll runs from school-set rules with loss of pay from approved unpaid leave, variance flags, approval by the principal, payslips and a bank file. The seeded deduction rules are examples and the screen says so until a qualified person checks them.
+- **Transport**: routes, stops, vehicles with document expiry warnings, crew, riders with parent consent and seat checks, and a phone screen for drivers and attendants to mark each child on and off the bus (parents are told).
+- **Purchasing and stores**: purchase requests → approval → orders → deliveries → supplier bills matched against the order, stock with reorder warnings, and an asset register.
+- **Library**: catalogue, issue and return with loan limits, overdue fines and waivers.
+- **Reception**: visitor passes and early pickups; a child leaves only with an approved guardian unless an authorised person records an override.
+- **Health and safeguarding**: infirmary visits (parents told when allowed), "Report a concern" for every staff member, and restricted case files for the safeguarding lead. Urgent concerns alert the lead and principal at once.
+- **Messages and helpdesk**: English and Kannada notices with an audience preview (bulk sends need a second person), and a helpdesk with response deadlines and confidential grievances.
+
 **Parents**
 - Each linked child's attendance, homework, upcoming exams, marks, awards and school notices.
+- Fees with online payment (test mode) and receipts, the school bus with today's boarding, library loans, nurse visits, and helpdesk requests.
 
 **Non-teaching staff**
-- Phone-friendly self-service: own details, own pay, school notices.
+- Phone-friendly self-service: own details, own pay, leave, payslips, helpdesk, reporting a concern, plus the desk their role runs (trips, infirmary, library, stores).
 
 **Students**
 - **Dashboard**: greeting banner, today's classes, homework due, next exam and this month's attendance, today's timetable with a LIVE marker, continue learning, AI study coach plan, upcoming tasks, weekly goals and announcements.
@@ -95,13 +117,15 @@ Across the app the **EN / ಕನ್ನಡ** toggle translates the whole interfac
 
 - [docs/AUDIT.md](docs/AUDIT.md): what existed, what changed, and the gap analysis.
 - [docs/TRACKER.md](docs/TRACKER.md): the full target scope (all 34 administration domains), acceptance criteria coverage, the AI capability matrix and production blockers.
+
+This is a working pilot, not a production system. Before real school data goes in, the school still has to decide on hosting and backups, a payment gateway and bank, an SMS/WhatsApp provider, and have a qualified person confirm the payroll deduction rates; the tracker lists these.
 - [docs/ACCESS.md](docs/ACCESS.md): sign-in journeys, the role and permission matrix, the data model and the API.
 
 ## Stack
 
-- **Web**: React 18, Vite 5, Tailwind CSS 3, React Router 6, lucide-react. UI strings in `src/i18n.js`.
+- **Web**: React 18, Vite 5, Tailwind CSS 3, React Router 6, lucide-react. UI strings in `src/i18n.js`, `src/i18n-admin.js` and `src/i18n-ops.js`; office screens in `src/pages/ops/`.
 - **API**: Node.js + Express in `server/`, SQLite through Node's built-in `node:sqlite` (no database server to run), versioned migrations in `server/migrations/`, cookie sessions with scrypt-hashed passwords, TOTP 2-step sign-in.
-- **Access control**: roles and permissions in `shared/roles.js`, enforced per request in `server/access.js`; identity, admin, parent and staff routes in `server/identity.js`.
+- **Access control**: roles and permissions in `shared/roles.js`, enforced per request in `server/access.js`; identity, admin, parent and staff routes in `server/identity.js`; office modules in `server/ops/`.
 - **AI**: `@anthropic-ai/sdk` in `server/ai.js` (streaming chat, structured JSON output for plans, tests and translations).
 - **Shared catalogue**: subjects, chapters, timetable, mock test and badges in `shared/catalog.js`.
 - **Deploy**: `Dockerfile` + `docker-compose.yml`; data lives in the `vidyanexus-data` volume.

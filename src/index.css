@@ -21,3 +21,26 @@ body {
 .overflow-x-auto::-webkit-scrollbar {
   display: none;
 }
+
+/* Receipts and payslips print on their own, without the app around them. */
+@media print {
+  body:has(.print-area) * {
+    visibility: hidden;
+  }
+  body:has(.print-area) .print-area,
+  body:has(.print-area) .print-area * {
+    visibility: visible;
+  }
+  body:has(.print-area) .print-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 24px;
+  }
+  body:has(.print-area) [role='dialog'] {
+    max-height: none;
+    overflow: visible;
+    box-shadow: none;
+  }
+}

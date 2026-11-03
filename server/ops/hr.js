@@ -237,7 +237,7 @@ export function registerHr(r) {
     notify(s, usersWithPerm(s, 'leave.approve').filter((u) => u !== req.user.id), {
       title: { en: `Leave request: ${req.user.name}`, kn: `ರಜೆ ಕೋರಿಕೆ: ${req.user.name}` },
       body: { en: `${type.name_en}, ${days} day(s) from ${from}.`, kn: `${type.name_kn}, ${from} ರಿಂದ ${days} ದಿನ.` },
-      link: '/leave',
+      link: '/leave-approvals',
       source: `leave:${lid}`,
       kind: 'approval',
     })

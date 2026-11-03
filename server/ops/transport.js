@@ -78,15 +78,16 @@ function exceptions(schoolId) {
   const out = []
   for (const r of routeRows(schoolId)) {
     if (r.vehicle_id && r.riders > r.capacity) out.push({ kind: 'over_capacity', route: r.code, detail: `${r.riders}/${r.capacity}` })
-    if (!r.vehicle_id || !r.driver_user_id) out.push({ kind: 'unassigned', route: r.code, detail: !r.vehicle_id ? 'vehicle' : 'driver' })
+    if (!r.vehicle_id) out.push({ kind: 'no_vehicle', route: r.code })
+    else if (!r.driver_user_id) out.push({ kind: 'no_driver', route: r.code })
   }
   for (const v of all("SELECT * FROM vehicles WHERE school_id = ? AND status = 'active'", schoolId)) {
-    for (const f of docFlags(v)) if (f.state !== 'ok') out.push({ kind: `document_${f.state}`, route: v.reg_no, detail: `${f.doc} ${f.until ?? ''}`.trim() })
+    for (const f of docFlags(v)) if (f.state !== 'ok') out.push({ kind: `document_${f.state}`, route: v.reg_no, doc: f.doc, until: f.until })
   }
   for (const t of all('SELECT t.*, r.code FROM trips t JOIN transport_routes r ON r.id = t.route_id WHERE t.school_id = ? AND t.trip_date = ?', schoolId, today)) {
     const v = tripView(t)
-    if (!v.attendantPresent) out.push({ kind: 'no_attendant', route: t.code, detail: t.direction })
-    if (v.gpsStale) out.push({ kind: 'gps_stale', route: t.code, detail: t.direction })
+    if (!v.attendantPresent) out.push({ kind: 'no_attendant', route: t.code, direction: t.direction })
+    if (v.gpsStale) out.push({ kind: 'gps_stale', route: t.code, direction: t.direction })
     if (t.status === 'closed' && t.closing_note) out.push({ kind: 'closed_with_note', route: t.code, detail: t.closing_note })
   }
   return out

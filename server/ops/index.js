@@ -48,7 +48,7 @@ ops.get('/approvals', requireWorkspace, (req, res) => {
   add('requisitions', 'procurement.approve', '/purchasing', has('procurement.approve') && n("SELECT COUNT(*) AS n FROM requisitions WHERE school_id = ? AND status = 'submitted' AND requested_by != ?", s, me))
   add('invoices', 'procurement.approve', '/purchasing?tab=invoices', has('procurement.approve') && n("SELECT COUNT(*) AS n FROM vendor_invoices WHERE school_id = ? AND status IN ('matched', 'mismatch') AND recorded_by != ?", s, me))
   add('messages', 'messages.approve', '/messages', has('messages.approve') && n("SELECT COUNT(*) AS n FROM messages WHERE school_id = ? AND status = 'pending_approval' AND created_by != ?", s, me))
-  add('pickups', 'visitors.manage', '/reception', has('visitors.manage') && n("SELECT COUNT(*) AS n FROM pickup_requests WHERE school_id = ? AND status = 'waiting'", s))
+  add('pickups', 'visitors.manage', '/reception?tab=pickups', has('visitors.manage') && n("SELECT COUNT(*) AS n FROM pickup_requests WHERE school_id = ? AND status = 'waiting'", s))
   add('tickets', 'helpdesk.manage', '/helpdesk', has('helpdesk.manage') && n(`SELECT COUNT(*) AS n FROM tickets WHERE school_id = ? AND status IN ('open', 'in_progress') ${has('helpdesk.grievance') ? '' : "AND category != 'grievance'"}`, s))
   add('safeguarding', 'safeguarding.view', '/safeguarding', has('safeguarding.view') && n("SELECT COUNT(*) AS n FROM safeguarding_cases WHERE school_id = ? AND status != 'closed'", s))
   res.json({ items, total: items.reduce((a, i) => a + i.count, 0) })

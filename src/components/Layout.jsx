@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { ArrowLeftRight, Bell, ChevronDown, LogOut, Search, Settings, UserRound } from 'lucide-react'
+import { ArrowLeftRight, Bell, ChevronDown, Loader2, LogOut, Search, Settings, UserRound } from 'lucide-react'
 import { useApp } from '../AppContext'
+import { api } from '../api'
 import { Logo } from './Logo'
 import { navFor } from './nav'
 import SearchPalette from './SearchPalette'
@@ -172,49 +173,83 @@ function ProfileMenu() {
   )
 }
 
-function Sidebar() {
+// Unread inbox items for staff, admin and parent workspaces. Pages that mark
+// items read fire a 'vn:inbox' event so the badge updates straight away.
+function useInboxCount(enabled) {
+  const [unread, setUnread] = useState(0)
+  const location = useLocation()
+  useEffect(() => {
+    if (!enabled) return undefined
+    let live = true
+    const load = () =>
+      api('/inbox/count')
+        .then((r) => live && setUnread(r.unread))
+        .catch(() => {})
+    load()
+    const timer = window.setInterval(load, 60000)
+    window.addEventListener('vn:inbox', load)
+    return () => {
+      live = false
+      window.clearInterval(timer)
+      window.removeEventListener('vn:inbox', load)
+    }
+  }, [enabled, location.pathname])
+  return unread
+}
+
+const SECTION_LABEL = { school: 'navSchool', office: 'navOffice', me: 'navForMe' }
+
+function CountBadge({ n }) {
+  if (!n) return null
+  return <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[11px] font-semibold text-white">{n > 99 ? '99+' : n}</span>
+}
+
+function Sidebar({ unread }) {
   const { t, homework, user, workspace } = useApp()
   const pendingHomework = homework.filter((h) => !h.done && !h.project && h.due !== 'overdue').length
   const { navItems } = navFor(user.role, workspace, workspace?.permissions)
+  // Long menus (office staff with many duties) get tighter rows and section titles.
+  const compact = navItems.length > 10
   return (
     <aside className="sticky top-3 hidden h-[calc(100vh-1.5rem)] w-[236px] shrink-0 flex-col overflow-hidden rounded-3xl bg-white shadow-card lg:flex">
-      <div className="px-6 pb-6 pt-5">
+      <div className={`px-6 pt-5 ${compact ? 'pb-3' : 'pb-6'}`}>
         <Link to="/">
           <Logo tagline={t('tagline')} />
         </Link>
       </div>
-      <nav className="flex flex-col gap-1 px-3">
-        {navItems.map(({ to, key, icon: Icon, end, badge, accent }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={end}
-            className={({ isActive }) =>
-              `flex items-center gap-4 rounded-xl px-4 py-[11px] text-[15px] transition-colors ${
-                isActive ? 'bg-brand-50 font-semibold text-brand-700' : 'text-ink hover:bg-slate-50'
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <Icon
-                  size={22}
-                  strokeWidth={isActive ? 2.2 : 1.7}
-                  className={isActive ? 'text-brand-600' : accent ? 'text-violet-600' : 'text-slate-700'}
-                  fill={isActive && key === 'dashboard' ? 'currentColor' : 'none'}
-                />
-                <span className="flex-1">{t(key)}</span>
-                {badge && pendingHomework > 0 && (
-                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[11px] font-semibold text-white">
-                    {pendingHomework}
-                  </span>
-                )}
-              </>
+      <nav className={`flex flex-col px-3 ${compact ? 'min-h-0 flex-1 gap-0.5 overflow-y-auto pb-4' : 'gap-1'}`}>
+        {navItems.map(({ to, key, icon: Icon, end, badge, accent, section, inbox }, i) => (
+          <div key={to}>
+            {compact && section && section !== navItems[i - 1]?.section && (
+              <p className="px-4 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t(SECTION_LABEL[section])}</p>
             )}
-          </NavLink>
+            <NavLink
+              to={to}
+              end={end}
+              className={({ isActive }) =>
+                `flex items-center rounded-xl transition-colors ${compact ? 'gap-3 px-4 py-2 text-[14px]' : 'gap-4 px-4 py-[11px] text-[15px]'} ${
+                  isActive ? 'bg-brand-50 font-semibold text-brand-700' : 'text-ink hover:bg-slate-50'
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <Icon
+                    size={compact ? 19 : 22}
+                    strokeWidth={isActive ? 2.2 : 1.7}
+                    className={isActive ? 'text-brand-600' : accent ? 'text-violet-600' : 'text-slate-700'}
+                    fill={isActive && key === 'dashboard' ? 'currentColor' : 'none'}
+                  />
+                  <span className="flex-1">{t(key)}</span>
+                  {badge && <CountBadge n={pendingHomework} />}
+                  {inbox && <CountBadge n={unread} />}
+                </>
+              )}
+            </NavLink>
+          </div>
         ))}
       </nav>
-      <div className="mt-auto">
+      <div className={`mt-auto ${compact ? 'hidden' : ''}`}>
         <img src={school} alt="" className="w-full select-none" draggable="false" />
         <div className="bg-white px-11 pb-7 pt-4">
           <p className="whitespace-pre-line text-[14px] leading-snug text-ink">{t('brighterFutures')}</p>
@@ -226,7 +261,27 @@ function Sidebar() {
   )
 }
 
-function Topbar({ onSearch }) {
+function InboxBell({ unread, small }) {
+  const { t } = useApp()
+  return (
+    <Link
+      to="/inbox"
+      className={`relative flex items-center justify-center rounded-full text-ink hover:bg-slate-100 ${small ? 'h-8 w-8' : 'h-11 w-11'}`}
+      aria-label={`${t('nav_inbox')}${unread ? ` (${unread})` : ''}`}
+    >
+      <Bell size={small ? 19 : 24} strokeWidth={1.8} />
+      {unread > 0 && (
+        <span
+          className={`absolute flex items-center justify-center rounded-full bg-rose-500 font-semibold text-white ring-2 ring-white ${small ? 'right-0 top-0 h-4 min-w-4 px-0.5 text-[8px]' : 'right-1 top-0.5 h-[18px] min-w-[18px] px-1 text-[10px]'}`}
+        >
+          {unread > 99 ? '99+' : unread}
+        </span>
+      )}
+    </Link>
+  )
+}
+
+function Topbar({ onSearch, unread }) {
   const { t, user } = useApp()
   const student = user.role === 'student'
   return (
@@ -242,14 +297,14 @@ function Topbar({ onSearch }) {
       </button>
       <div className="ml-auto flex items-center gap-5">
         <LanguageToggle />
-        {student && <NotificationsMenu />}
+        {student ? <NotificationsMenu /> : <InboxBell unread={unread} />}
         <ProfileMenu />
       </div>
     </header>
   )
 }
 
-function MobileHeader({ onSearch }) {
+function MobileHeader({ onSearch, unread }) {
   const { user, workspaces, t } = useApp()
   const student = user.role === 'student'
   return (
@@ -269,7 +324,7 @@ function MobileHeader({ onSearch }) {
             <ArrowLeftRight size={18} />
           </Link>
         )}
-        {student && <NotificationsMenu small />}
+        {student ? <NotificationsMenu small /> : <InboxBell unread={unread} small />}
         <Link to="/profile">
           <Avatar className="h-8 w-8" />
         </Link>
@@ -278,7 +333,7 @@ function MobileHeader({ onSearch }) {
   )
 }
 
-function BottomNav() {
+function BottomNav({ unread }) {
   const { t, user, workspace } = useApp()
   const { bottomNavItems } = navFor(user.role, workspace, workspace?.permissions)
   return (
@@ -294,8 +349,11 @@ function BottomNav() {
         >
           {({ isActive }) => (
             <>
-              <Icon size={20} strokeWidth={isActive ? 2.2 : 1.7} fill={isActive && key === 'home' ? 'currentColor' : 'none'} />
-              {t(key)}
+              <span className="relative">
+                <Icon size={20} strokeWidth={isActive ? 2.2 : 1.7} fill={isActive && key === 'home' ? 'currentColor' : 'none'} />
+                {to === '/inbox' && unread > 0 && <span className="absolute -right-1.5 -top-1 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white" />}
+              </span>
+              <span className="max-w-full truncate px-0.5">{t(key)}</span>
             </>
           )}
         </NavLink>
@@ -308,6 +366,7 @@ export default function Layout() {
   const [searchOpen, setSearchOpen] = useState(false)
   const { toast, user, data } = useApp()
   const location = useLocation()
+  const unread = useInboxCount(user.role !== 'student')
 
   useEffect(() => {
     if (user.role !== 'student') return
@@ -327,15 +386,23 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-canvas">
-      <MobileHeader onSearch={() => setSearchOpen(true)} />
+      <MobileHeader onSearch={() => setSearchOpen(true)} unread={unread} />
       <div className="mx-auto flex max-w-[1680px] gap-5 lg:p-3 lg:pr-6">
-        <Sidebar />
+        <Sidebar unread={unread} />
         <main className="min-w-0 flex-1 px-4 pb-24 pt-2 lg:px-0 lg:pb-6 lg:pt-1">
-          <Topbar onSearch={() => setSearchOpen(true)} />
-          <Outlet />
+          <Topbar onSearch={() => setSearchOpen(true)} unread={unread} />
+          <Suspense
+            fallback={
+              <div className="flex justify-center py-24 text-muted">
+                <Loader2 className="animate-spin" />
+              </div>
+            }
+          >
+            <Outlet />
+          </Suspense>
         </main>
       </div>
-      <BottomNav />
+      <BottomNav unread={unread} />
       {data && <SearchPalette open={searchOpen} onClose={() => setSearchOpen(false)} />}
       {toast && (
         <div className="fixed bottom-20 left-1/2 z-50 -translate-x-1/2 rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-white shadow-xl lg:bottom-8">

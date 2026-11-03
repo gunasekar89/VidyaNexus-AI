@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { BookOpen, Cpu, FlaskConical, Globe2, X } from 'lucide-react'
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useApp } from '../AppContext'
 
 export function Card({ className = '', children, ...props }) {
@@ -98,7 +99,8 @@ export function Modal({ open, onClose, title, children, wide }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose])
   if (!open) return null
-  return (
+  // Rendered at the end of <body> so dialogs opened from other dialogs stack correctly.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
       <div
         className={`max-h-[90vh] w-full overflow-y-auto rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-3xl ${wide ? 'sm:max-w-2xl' : 'sm:max-w-lg'}`}
@@ -114,7 +116,8 @@ export function Modal({ open, onClose, title, children, wide }) {
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

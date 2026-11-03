@@ -48,7 +48,7 @@ export function registerProcurement(r) {
         s,
       ).map((q) => ({
         id: q.id, number: q.number, purpose: q.purpose, status: q.status, estimatedPaise: q.estimated_paise, requestedBy: q.requested_name, decidedBy: q.decided_name ?? '', mine: q.requested_by === req.user.id, createdAt: q.created_at,
-        lines: all('SELECT l.qty, l.est_unit_paise, i.name, i.unit FROM requisition_lines l JOIN items i ON i.id = l.item_id WHERE l.requisition_id = ?', q.id).map((l) => ({ name: l.name, unit: l.unit, qty: l.qty, estUnitPaise: l.est_unit_paise })),
+        lines: all('SELECT l.item_id, l.qty, l.est_unit_paise, i.name, i.unit FROM requisition_lines l JOIN items i ON i.id = l.item_id WHERE l.requisition_id = ?', q.id).map((l) => ({ itemId: l.item_id, name: l.name, unit: l.unit, qty: l.qty, estUnitPaise: l.est_unit_paise })),
       })),
       orders: all('SELECT o.*, v.name AS vendor FROM purchase_orders o JOIN vendors v ON v.id = o.vendor_id WHERE o.school_id = ? ORDER BY o.id DESC LIMIT 100', s).map((o) => {
         const lines = poLines(o.id)
