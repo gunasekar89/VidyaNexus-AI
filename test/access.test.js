@@ -235,6 +235,15 @@ describe('5. multi-role users switch only among verified memberships', () => {
 })
 
 describe('sign-in, recovery and onboarding', () => {
+  test('each sign-in page lists only the demo accounts for its own card', async () => {
+    const keys = async (portal) => (await app.client().get(`/auth/demo?portal=${portal}`)).data.accounts.map((a) => a.key)
+    const family = await keys('family')
+    const admin = await keys('admin')
+    assert.deepEqual(family.sort(), ['guardian', 'student'])
+    assert.ok(admin.includes('accountantParent') && admin.includes('principal'))
+    assert.ok(!(await keys('staff')).includes('accountantParent'))
+  })
+
   test('unknown accounts and wrong passwords get the same answer', async () => {
     const c = app.client()
     const a = await c.post('/auth/login', { identifier: 'nobody@nowhere.in', password: 'x' })

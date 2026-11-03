@@ -147,7 +147,7 @@ identity.get('/auth/demo', (req, res) => {
     })),
   ]
   const accounts = list
-    .filter((a) => !portal || a.card === portal || (a.key === 'accountantParent' && portal === 'family'))
+    .filter((a) => !portal || a.card === portal)
     .map((a) => {
       const u = one('SELECT password_hash, mfa_secret, mfa_enabled_at FROM users WHERE email = ?', a.email)
       if (!u || !verifyPassword(a.password, u.password_hash)) return null

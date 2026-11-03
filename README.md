@@ -23,7 +23,7 @@ Demo logins (shown on each sign-in page until their passwords are changed; all d
 | Administration | Principal Dr. Shalini Rao | `principal@vidyanexus.school` | `admin1234` + 2-step code |
 | Administration | Trustee Ravi Shankar (school group) | `trustee@vidyanexus.school` | `admin1234` + 2-step code |
 | Administration | HR officer Farah Khan (sees pay) | `hr@vidyanexus.school` | `admin1234` + 2-step code |
-| Admin + parent | Kiran M., accountant and Rahul's father (two roles) | `kiran.m@vidyanexus.school` | `admin1234` (+ code for the accountant role) |
+| Administration | Kiran M., accountant and Rahul's father (two roles; switch to the parent view from the profile menu) | `kiran.m@vidyanexus.school` | `admin1234` + 2-step code |
 | Administration | Receptionist Lakshmi N. (visitors, pickups, admissions, helpdesk) | `reception@vidyanexus.school` | `admin1234` + 2-step code |
 | Administration | Safeguarding lead Meera Iyer | `safeguarding@vidyanexus.school` | `admin1234` + 2-step code |
 | Teacher / Staff | School nurse Anita D'Souza | `nurse@vidyanexus.school` or `EMP-0301` + `VPS-BLR` | `staff1234` |
