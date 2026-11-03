@@ -1,6 +1,8 @@
 import { useState } from 'react'
-import { BadgeCheck, Eye, EyeOff, Info, Megaphone, Wallet } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { BadgeCheck, Eye, EyeOff, Megaphone, Wallet } from 'lucide-react'
 import { useApp } from '../AppContext'
+import { opsNavFor } from '../components/nav'
 import { Card, PageHeader } from '../components/ui'
 import { dateLabel, relativeTime } from '../lib/dates'
 import { Loading, rupees, useApi } from './admin/Admin'
@@ -13,6 +15,8 @@ export default function StaffHome() {
   const d = state.data
   if (!d) return <Loading state={state} />
   const e = d.employee
+  // Desk pages first (library, infirmary, trips…), then leave, payslips and the rest.
+  const shortcuts = opsNavFor(workspace, workspace?.permissions).filter((p) => p.to !== '/inbox').slice(0, 8)
   return (
     <div className="max-w-3xl">
       <PageHeader title={`${t('myWork')} · ${tr(user.firstName)}`} subtitle={workspace?.school ? `${tr(workspace.roleLabel)} · ${tr(workspace.school.name)}` : ''} />
@@ -65,9 +69,14 @@ export default function StaffHome() {
           )}
         </Card>
       </div>
-      <p className="mt-4 flex items-start gap-2 rounded-2xl bg-slate-100 px-4 py-3 text-sm text-muted">
-        <Info size={16} className="mt-0.5 shrink-0" /> {t('selfServiceNext')}
-      </p>
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {shortcuts.map(({ to, key, icon: Icon }) => (
+          <Link key={to} to={to} className="flex flex-col items-start gap-2 rounded-2xl bg-white p-4 text-sm font-medium text-ink shadow-card hover:ring-1 hover:ring-brand-200">
+            <Icon size={20} className="text-brand-600" />
+            {t(key)}
+          </Link>
+        ))}
+      </div>
       <Card className="mt-4 p-5">
         <h2 className="mb-3 flex items-center gap-2 font-semibold text-ink">
           <Megaphone size={18} className="text-brand-600" /> {t('schoolNotices')}

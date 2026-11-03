@@ -14,11 +14,13 @@ export async function startApp({ prepare } = {}) {
   const { migrate } = await import('../server/migrate.js')
   const { seedIfEmpty } = await import('../server/seed.js')
   const { backfillLegacy, seedDemoIdentities } = await import('../server/tenancy.js')
+  const { seedOperations } = await import('../server/ops/seed.js')
   const { createApp } = await import('../server/app.js')
   migrate({ log: () => {} })
   seedIfEmpty()
   backfillLegacy()
   seedDemoIdentities()
+  seedOperations()
   const server = createApp().listen(0)
   await new Promise((r) => server.once('listening', r))
   const base = `http://127.0.0.1:${server.address().port}/api`

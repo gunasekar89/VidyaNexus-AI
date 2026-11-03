@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Building2, CalendarRange, CheckCircle2, Circle, Copy, GraduationCap, Loader2, Lock, MailPlus, Search, ShieldCheck, UserCheck, Users } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { BellRing, Building2, CalendarRange, CheckCircle2, ChevronRight, Circle, Copy, GraduationCap, Loader2, Lock, MailPlus, Search, ShieldCheck, UserCheck, Users } from 'lucide-react'
 import { useApp } from '../../AppContext'
 import { api } from '../../api'
 import { Card, Modal, PageHeader, Pill } from '../../components/ui'
 import { inputClass } from '../../components/AuthShell'
 import { MODULES } from '../../i18n-admin'
+import { navFor } from '../../components/nav'
 import { dateLabel, relativeTime } from '../../lib/dates'
 
 // Loads an API path and exposes { data, error, reload }.
@@ -12,9 +14,11 @@ export function useApi(path) {
   const [state, setState] = useState({ data: null, error: null })
   const reload = useCallback(
     () =>
-      api(path)
-        .then((data) => setState({ data, error: null }))
-        .catch((error) => setState((s) => ({ data: s.data, error }))),
+      path
+        ? api(path)
+            .then((data) => setState({ data, error: null }))
+            .catch((error) => setState((s) => ({ data: s.data, error })))
+        : Promise.resolve(setState({ data: null, error: null })),
     [path],
   )
   useEffect(() => {
@@ -41,18 +45,18 @@ export function Loading({ state }) {
   )
 }
 
-export const rupees = (paise, lang) =>
-  new Intl.NumberFormat(lang === 'kn' ? 'kn-IN' : 'en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(paise / 100)
+export const rupees = (paise) =>
+  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(paise / 100)
 
 function Stat({ icon: Icon, label, value, tone = 'bg-brand-50 text-brand-600' }) {
   return (
-    <Card className="flex items-center gap-4 p-5">
-      <span className={`flex h-12 w-12 items-center justify-center rounded-2xl ${tone}`}>
-        <Icon size={24} />
+    <Card className="flex items-center gap-3 p-4 sm:gap-4 sm:p-5">
+      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl sm:h-12 sm:w-12 ${tone}`}>
+        <Icon size={22} />
       </span>
-      <div>
+      <div className="min-w-0">
         <p className="text-2xl font-bold text-ink">{value}</p>
-        <p className="text-sm text-muted">{label}</p>
+        <p className="text-xs text-muted sm:text-sm">{label}</p>
       </div>
     </Card>
   )
@@ -78,22 +82,56 @@ const Td = ({ children, className = '' }) => <td className={`px-4 py-3 text-ink 
 
 // ---------- Overview ----------
 
+// What is waiting for this person's decision, across modules.
+function WaitingForYou() {
+  const { t } = useApp()
+  const state = useApi('/approvals')
+  const items = state.data?.items ?? []
+  return (
+    <Card className="mt-4 p-5">
+      <h2 className="flex items-center gap-2 font-semibold text-ink">
+        <BellRing size={18} className="text-brand-600" /> {t('waitingForYou')}
+      </h2>
+      {!state.data ? (
+        <p className="mt-2 text-sm text-muted">…</p>
+      ) : !items.length ? (
+        <p className="mt-2 text-sm text-muted">{t('nothingWaiting')}</p>
+      ) : (
+        <ul className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          {items.map((i) => (
+            <li key={i.key}>
+              <Link to={i.link} className="flex items-center gap-3 rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm text-ink hover:bg-brand-50">
+                <span className="flex h-7 min-w-7 items-center justify-center rounded-full bg-amber-100 px-2 text-xs font-bold text-amber-700">{i.count}</span>
+                <span className="flex-1">{t(`ap_${i.key}`)}</span>
+                <ChevronRight size={16} className="text-slate-400" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  )
+}
+
 export function AdminOverview() {
-  const { t, tr, workspace } = useApp()
+  const { t, tr, user, workspace } = useApp()
   const state = useApi('/admin/overview')
   const o = state.data
   if (!o) return <Loading state={state} />
+  const open = new Set(navFor(user.role, workspace, workspace?.permissions).navItems.map((i) => i.to))
+  const linkOf = (m) => [].concat(m.to ?? []).find((p) => open.has(p))
   const att = o.attendanceToday
   const marked = (att.P ?? 0) + (att.A ?? 0)
   return (
     <div>
       <PageHeader title={tr(o.school.name)} subtitle={`${tr(workspace.roleLabel)} · ${t('academicYear')} ${o.year?.label ?? '—'} · ${o.school.code}`} />
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <Stat icon={GraduationCap} label={t('studentsEnrolled')} value={o.counts.students} />
         <Stat icon={CalendarRange} label={t('sectionsCount')} value={o.counts.sections} tone="bg-orange-50 text-orange-600" />
         <Stat icon={Users} label={t('staffCount')} value={o.counts.staff} tone="bg-emerald-50 text-emerald-600" />
         <Stat icon={UserCheck} label={t('guardiansLinked')} value={o.counts.guardians} tone="bg-violet-50 text-violet-600" />
       </div>
+      <WaitingForYou />
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <Card className="p-5">
           <h2 className="font-semibold text-ink">{t('attendanceToday')}</h2>
@@ -126,7 +164,13 @@ export function AdminOverview() {
             {MODULES.map((m) => (
               <li key={m.key} className="flex items-center gap-2 text-sm">
                 {m.live ? <CheckCircle2 size={16} className="shrink-0 text-emerald-500" /> : <Circle size={16} className="shrink-0 text-slate-300" />}
-                <span className={m.live ? 'text-ink' : 'text-slate-400'}>{tr(m)}</span>
+                {m.live && linkOf(m) ? (
+                  <Link to={linkOf(m)} className="text-ink underline decoration-slate-200 underline-offset-4 hover:text-brand-700 hover:decoration-brand-300">
+                    {tr(m)}
+                  </Link>
+                ) : (
+                  <span className={m.live ? 'text-ink' : 'text-slate-400'}>{tr(m)}</span>
+                )}
                 {!m.live && <span className="text-[11px] text-slate-400">· {t('modulePlanned')}</span>}
               </li>
             ))}

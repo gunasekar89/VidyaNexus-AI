@@ -52,7 +52,7 @@ All of it is working code with automated tests; nothing below is a mock-up.
 | Missing | Not built |
 | Unknown | Needs a decision or information from the school or an official source |
 
-| Domain (master prompt §4) | Status after this increment |
+| Domain (master prompt §4) | Status after release 1 (see section 4 for release 2) |
 | --- | --- |
 | 1 Group and school setup | Partial: structure, years, terms, grades, sections, departments, add-section; branding, affiliations, delegations and module switches missing |
 | 3 Student lifecycle and family records | Partial: enrollments, guardians, admission numbers; transfers, promotion, withdrawal, alumni, corrections missing |
@@ -60,19 +60,47 @@ All of it is working code with automated tests; nothing below is a mock-up.
 | 5 Student attendance | Partial: daily attendance per school; period attendance, corrections approval, guardian notifications missing |
 | 6 Assessments | Partial: exams and marks per section; moderation, approval, report cards, versioned publication missing |
 | 12 Employee lifecycle | Partial: employee records; contracts, appraisals, exits missing |
-| 14 Payroll | Partial: restricted pay records only; payroll runs missing |
-| 24 Health and inclusion, 25 Safeguarding | Partial: restricted notes with separate permissions; workflows missing |
+| 14 Payroll | Release 2: see section 4 |
+| 24 Health and inclusion, 25 Safeguarding | Release 2: see section 4 |
 | 32 Reporting | Partial: school overview and group totals |
 | 34 Platform onboarding | Partial: invitations, demo seeding; imports, provisioning, offboarding missing |
-| 2, 7–11, 13, 15–23, 26–31, 33 | Missing (planned; see tracker) |
+| 2, 7–11, 13, 15–23, 26, 27 | Release 2: see section 4 |
+| 28–31, 33 | Missing (planned; see tracker) |
 
 ### Unknowns that need the school or an official source
 
 - Board per school (Karnataka State, CBSE, ICSE) and its assessment rules.
 - Fee heads, instalment plans, concession policy and approval thresholds.
 - Payment gateway and bank (affects contracts, fees and settlement files). **Money decision.**
-- Payroll statutory items (PF, ESI, PT, TDS) must be checked against current official sources before any calculation is built.
+- Payroll statutory items (PF, ESI, PT, TDS). The payroll engine takes these as school-configured rules; the seeded PF, ESI and PT rules are labelled examples, and the screen warns until a qualified person has checked them against current official sources. Nothing is paid from them until then.
 - DPDP Act / Rules commencement and the school's consent process for children's data.
 - Whether SATS, UDISE+ or APAAR exports are needed, and the officially permitted route for each.
 - SMS / WhatsApp / email provider (costs money and needs sender registration). **Money decision.**
 - Production hosting, backups and domain. **Deployment decision.** The current KodeKloud playgrounds are temporary and suitable only for demos.
+
+## 4. Release 2: the office modules
+
+Working code behind permissions, with 29 more acceptance tests in [`test/operations.test.js`](../test/operations.test.js), English and Kannada for every screen (checked by `npm run check:i18n`), and browser checks on desktop and phone. Migration `003-operations` adds the tables; demo data covers every module. It is a working pilot, not a production-ready system: see the tracker's production blockers.
+
+| Domain (master prompt §4) | Status after release 2 |
+| --- | --- |
+| 2 Admissions | Implemented: enquiry → application → document checks → offer → acceptance → enrollment, with duplicate detection and stale-screen protection. Enrolling creates one student, a verified guardian link and the year's fees, once |
+| 7 Fee setup | Implemented: fee heads, instalment plans per class, concessions and scholarships approved by a second person. Proration and late fees missing |
+| 8 Fee collection | Implemented: counter payments (cash, cheque, UPI, card, net banking, transfer) with one receipt per payment even if submitted twice, oldest-dues-first allocation with credit, bounced cheques, reconciliation, refunds with approval, reminders, and a test-mode online gateway with signed webhooks and settlement. Live gateway Unknown (money decision) |
+| 9 Accounting | Implemented: chart of accounts, balanced automatic postings from fees, payroll and purchases, manual journals approved by someone else, reversals instead of edits, month locks, trial balance |
+| 10 Procurement | Implemented: requisition → approval → purchase order → goods receipt (partial deliveries allowed) → supplier invoice three-way match → approval → payment |
+| 11 Recruitment | Missing |
+| 13 Leave | Implemented: leave types and balances, apply, approve (never your own), cancel. Rosters missing |
+| 14 Payroll | Implemented: configurable rules, loss of pay from approved unpaid leave, variance flags, the same inputs always giving the same run, approval by someone other than the preparer, payslips, bank file. Statutory rates Unknown (see above) |
+| 15 Outsourced workforce | Missing |
+| 16 Transport | Implemented: routes, stops, vehicles with document expiry warnings, crew, rider allocation with consent and seat checks, transport fees |
+| 17 Live transport | Partial: trips, boarding marked by the crew, parents told, a trip cannot close with children unaccounted for, location pings with a stale flag. GPS device adapter missing |
+| 18 Reception | Implemented: visitor passes and check-out; early pickup released only to an approved guardian unless an authorised person records an override |
+| 19 Stores | Implemented: items, receipts, issues, adjustments, reorder warnings; stock never goes below zero |
+| 20 Assets | Partial: asset register filled from goods receipts, with location and status. Maintenance missing |
+| 21 Library | Implemented: catalogue and copies, issue and return with loan limits, overdue fines and waivers with a reason |
+| 22 Meals, 23 Hostel | Missing (optional) |
+| 24 Health | Partial: infirmary visits by the nurse; guardians told only when their link allows health information. Inclusion plans missing |
+| 25 Safeguarding | Partial: any staff member can report; urgent concerns alert the safeguarding lead and principal at once without details and without AI; restricted case files with notes. Drills missing |
+| 26 Communication | Partial: English and Kannada messages with audience preview, bulk messages approved by a second person, in-app inbox with read status. SMS and WhatsApp Unknown (money decision) |
+| 27 Helpdesk | Implemented: requests with categories, priorities, response deadlines and comments; confidential grievances visible only to those allowed |

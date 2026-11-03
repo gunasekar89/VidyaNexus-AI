@@ -5,7 +5,7 @@ The complete target scope from the school-administration master prompt, in depen
 Status: **Done** (working, tested) · **Partial** · **Planned** · **Blocked** (needs a decision from the school owner).
 Phases: **F** Foundation · **C** Core school operations · **B** Broader administration · **A** Advanced intelligence.
 
-Last updated: 2 November 2026.
+Last updated: 3 November 2026 (release 2: the ten office modules).
 
 ## 1. Requirements matrix
 
@@ -35,8 +35,8 @@ Each row: what it is, who uses it, what it depends on, and when it is accepted.
 | F-18 | Group view: aggregate totals for the group's own schools | Owners, group managers | F-03 | No other group's schools | Done |
 | F-19 | Institution SSO (Google Workspace / Microsoft Entra) | Schools that use it | F-07 | Optional per school | Planned |
 | F-20 | Provider (SaaS) support access: separate admin, time-limited, school-approved, audited | Provider support | F-12 | No school data without an active grant | Planned |
-| F-21 | Workflow service: states, approvals, tasks, versioned approvals | All modules | F-12 | Stale approvals rejected | Planned |
-| F-22 | Outbox delivery worker with retries and dead-letter | Notifications | F-11 | Idempotent sends | Planned (table exists) |
+| F-21 | Workflow service: states, approvals, tasks, versioned approvals | All modules | F-12 | Stale approvals rejected | Partial: every money, pay, purchase, message and journal approval needs a second person; stale screens are refused (version check); one "Waiting for you" queue across modules. A configurable workflow designer is Planned |
+| F-22 | Outbox delivery worker with retries and dead-letter | Notifications | F-11 | Idempotent sends | Partial: in-app inbox delivery with unread counts; external SMS/email worker Planned (Blocked: provider) |
 | F-23 | Versioned policies, documents and file storage with access checks | All modules | F-21 | Files obey the same permissions | Planned |
 | F-24 | Encrypt MFA secrets at rest; key rotation | Engineering | F-09 | Secrets not readable from a DB copy | Planned (production blocker) |
 | F-25 | Account self-service: change mobile/email with verification; MFA reset by a second admin | Everyone | F-09 | Audited | Planned |
@@ -45,17 +45,17 @@ Each row: what it is, who uses it, what it depends on, and when it is accepted.
 
 | ID | Capability (master prompt domain) | Actors | Depends on | Acceptance | Status |
 | --- | --- | --- | --- | --- | --- |
-| C-01 | Admissions CRM: enquiry → application → documents → offer → enrollment (2) | Admissions, parents | F-04, F-21 | Criterion 6: no duplicate people, enrollments or fee demands | Planned |
+| C-01 | Admissions CRM: enquiry → application → documents → offer → enrollment (2) | Admissions, parents | F-04, F-21 | Criterion 6: no duplicate people, enrollments or fee demands | Done (online application form for parents Planned) |
 | C-02 | Student lifecycle: section change, promotion, transfer, withdrawal, alumni, corrections with evidence (3) | Admin, principal | F-04 | History kept; criterion 20 | Planned |
-| C-03 | Guardian management screens: verify, restrict pickup/communication, multiple guardians per child | Admissions, principal | F-04 | Criterion 3, 14 | Partial (invite-and-link done) |
+| C-03 | Guardian management screens: verify, restrict pickup/communication, multiple guardians per child | Admissions, principal | F-04 | Criterion 3, 14 | Partial (invite-and-link, verified links from admissions, pickup and health permissions enforced; an edit screen with re-verification Planned) |
 | C-04 | Student attendance: period attendance, late/early, correction approval, guardian notification (5) | Teachers, office | F-21, F-22 | Classroom and bus attendance separate | Partial (daily attendance) |
-| C-05 | Fee configuration: heads, instalments, concessions, scholarships, proration, approved changes (7) | Accountant, principal | F-03, F-21 | Integer paise; approvals | Blocked: school's fee policy |
-| C-06 | Fee collection: gateway, cash/cheque, partial payments, receipts, refunds, reconciliation (8) | Cashier, accountant, parents | C-05 | Criteria 7–9 | Blocked: payment gateway choice |
-| C-07 | Staff records, contracts, documents; leave and roster (12, 13) | HR, staff | F-04 | Criterion 11 | Partial (employee records) |
-| C-08 | Basic payroll review: attendance inputs, variance flags, approval (14) | HR, payroll | C-07 | Criterion 12; statutory items from official sources | Blocked: statutory rules review |
-| C-09 | Transport allocation and manifests (16) | Transport manager | F-04 | Criterion 13 | Planned |
-| C-10 | Notifications: circulars, targeted messages, delivery status, quiet hours, EN/KN (26) | Office, teachers | F-22 | Opt-in honoured | Blocked: SMS/WhatsApp provider |
-| C-11 | Management dashboards: attendance, admissions, collections, staff coverage (32) | Principal, owners | C-01..C-09 | Data freshness shown | Partial (overview, group totals) |
+| C-05 | Fee configuration: heads, instalments, concessions, scholarships, proration, approved changes (7) | Accountant, principal | F-03, F-21 | Integer paise; approvals | Done for heads, instalment plans per class, concessions and scholarships with approval; proration and late fees Planned. The school's real fee schedule is entered by the school (demo amounts are made up) |
+| C-06 | Fee collection: gateway, cash/cheque, partial payments, receipts, refunds, reconciliation (8) | Cashier, accountant, parents | C-05 | Criteria 7–9 | Done with a test-mode gateway (signed webhooks, settlement, exceptions). Live gateway Blocked: gateway and bank choice |
+| C-07 | Staff records, contracts, documents; leave and roster (12, 13) | HR, staff | F-04 | Criterion 11 | Partial (employee records; leave types, balances, apply, approve, cancel. Contracts, documents and rosters Planned) |
+| C-08 | Basic payroll review: attendance inputs, variance flags, approval (14) | HR, payroll | C-07 | Criterion 12; statutory items from official sources | Done (rules, loss of pay from approved leave, variance flags, approval, payslips, bank file). Statutory rates Blocked: the seeded rules are labelled examples until a qualified person verifies them |
+| C-09 | Transport allocation and manifests (16) | Transport manager | F-04 | Criterion 13 | Done |
+| C-10 | Notifications: circulars, targeted messages, delivery status, quiet hours, EN/KN (26) | Office, teachers | F-22 | Opt-in honoured | Partial: EN/KN messages with audience preview, second-person approval for bulk, in-app inbox with read status. SMS/WhatsApp Blocked: provider; quiet hours Planned |
+| C-11 | Management dashboards: attendance, admissions, collections, staff coverage (32) | Principal, owners | C-01..C-09 | Data freshness shown | Partial (overview, group totals, "Waiting for you", each module's summary figures) |
 | C-12 | Academic administration: subject allocation, timetable with conflict checks, substitutions (4) | Coordinator | F-04 | Teacher absence flow in §5 | Planned |
 | C-13 | Assessments: registration, moderation, approval, report cards, versioned publication (6) | Exam officer, teachers | F-21 | No unapproved results published | Partial (exams, marks) |
 | C-14 | CSV/Excel import with validation, dedupe, trial run, rejected-row report (34) | Admin | F-04 | No duplicates on re-import | Planned |
@@ -64,20 +64,20 @@ Each row: what it is, who uses it, what it depends on, and when it is accepted.
 
 | ID | Capability (domain) | Depends on | Status |
 | --- | --- | --- | --- |
-| B-01 | Accounting: chart of accounts, double-entry or Tally integration, period close (9) | C-06 | Planned (decision: in-app ledger vs Tally) |
-| B-02 | Procurement and suppliers: requisition → PO → GRN → invoice match (10) | F-21 | Planned |
+| B-01 | Accounting: chart of accounts, double-entry or Tally integration, period close (9) | C-06 | Done as an in-app double-entry ledger (automatic postings, approved manual journals, reversals, month locks, trial balance). Tally export Planned if the school uses Tally |
+| B-02 | Procurement and suppliers: requisition → PO → GRN → invoice match (10) | F-21 | Done |
 | B-03 | Recruitment and onboarding (11) | C-07 | Planned |
 | B-04 | Outsourced workforce: agency contracts, rosters, duty proof, bill checks (15) | C-07 | Planned |
-| B-05 | Transport live operations: GPS adapter, boarding events, missed pickup, incidents (17) | C-09 | Planned; GPS never proves custody |
-| B-06 | Reception, visitors, gate, early exit, pickup verification (18) | C-03 | Planned |
-| B-07 | Inventory and stores (19) | B-02 | Planned |
-| B-08 | Assets, facilities and maintenance (20) | B-02 | Planned |
-| B-09 | Library (21) | F-04 | Planned |
+| B-05 | Transport live operations: GPS adapter, boarding events, missed pickup, incidents (17) | C-09 | Partial: boarding and drop-off marked by crew, parents told, trips cannot close with children unaccounted for, location pings with a stale flag. A GPS device adapter is Planned; GPS never proves custody |
+| B-06 | Reception, visitors, gate, early exit, pickup verification (18) | C-03 | Done |
+| B-07 | Inventory and stores (19) | B-02 | Done |
+| B-08 | Assets, facilities and maintenance (20) | B-02 | Partial (asset register from goods receipts, location and status; maintenance work orders Planned) |
+| B-09 | Library (21) | F-04 | Done |
 | B-10 | Meals and canteen (22), optional | C-05 | Planned |
 | B-11 | Hostel / daycare / after-school (23), optional | C-05 | Planned |
-| B-12 | Health and inclusion workflows (24) | F-14 | Partial (restricted notes) |
-| B-13 | Safeguarding cases, drills, emergency escalation without AI (25) | F-14, F-22 | Partial (restricted notes) |
-| B-14 | Helpdesk and grievances (27) | F-21 | Planned |
+| B-12 | Health and inclusion workflows (24) | F-14 | Partial (infirmary visits; guardians told only when allowed to see health information; inclusion plans Planned) |
+| B-13 | Safeguarding cases, drills, emergency escalation without AI (25) | F-14, F-22 | Partial (anyone can report; urgent concerns alert the lead and principal at once without details; restricted case files. Drills Planned) |
+| B-14 | Helpdesk and grievances (27) | F-21 | Done |
 | B-15 | Activities, trips, sports, events (28) | C-05 | Planned |
 | B-16 | Documents and certificates with serial numbers, verification (29) | F-23 | Planned |
 | B-17 | Compliance calendar, evidence packs, renewals (30) | F-23 | Planned |
@@ -98,20 +98,20 @@ See §3 for the AI capability matrix. All AI work waits for the records it reads
 | 3 | Parents see only linked children | › 3 | Done |
 | 4 | Teachers can't read salaries or restricted notes | › 4 | Done |
 | 5 | Multi-role switching only among verified memberships | › 5 | Done |
-| 6 | Admission conversion without duplicates | – | Planned (C-01) |
-| 7 | Partial payments, concessions, refunds reconcile | – | Planned (C-06) |
-| 8 | Payment webhooks: duplicate/delayed/invalid/out-of-order safe | – | Planned (C-06) |
-| 9 | Settlement and reconciliation separate from capture | – | Planned (C-06) |
-| 10 | Posted entries balance; locked records need adjustments | – | Planned (B-01) |
-| 11 | Leave affects payroll and coverage only via approved policy | – | Planned (C-07, C-12) |
-| 12 | Reproducible, approved payroll | – | Planned (C-08) |
-| 13 | Transport exceptions | – | Planned (C-09, B-05) |
-| 14 | Pickup contact changes need verification; GPS never proves custody | – | Planned (C-03, B-06) |
-| 15 | Procurement partial receipts and mismatches | – | Planned (B-02) |
-| 16 | Safety escalation works when AI is down | – | Planned (B-13) |
+| 6 | Admission conversion without duplicates | `test/operations.test.js` › admissions | Done |
+| 7 | Partial payments, concessions, refunds reconcile | `test/operations.test.js` › fees and payments | Done |
+| 8 | Payment webhooks: duplicate/delayed/invalid/out-of-order safe | `test/operations.test.js` › online payment (test-mode gateway) | Done in test mode; repeat with the real gateway |
+| 9 | Settlement and reconciliation separate from capture | `test/operations.test.js` › fees and payments | Done |
+| 10 | Posted entries balance; locked records need adjustments | `test/operations.test.js` › accounting, and a final balance check after every module | Done |
+| 11 | Leave affects payroll and coverage only via approved policy | `test/operations.test.js` › HR (only approved unpaid leave reduces pay) | Partial (class coverage waits for C-12) |
+| 12 | Reproducible, approved payroll | `test/operations.test.js` › HR | Done |
+| 13 | Transport exceptions | `test/operations.test.js` › transport | Done |
+| 14 | Pickup contact changes need verification; GPS never proves custody | `test/operations.test.js` › reception, transport | Partial (release and boarding done; guardian edit screen with re-verification Planned with C-03) |
+| 15 | Procurement partial receipts and mismatches | `test/operations.test.js` › purchasing | Done |
+| 16 | Safety escalation works when AI is down | `test/operations.test.js` › health and safeguarding (no AI involved) | Done |
 | 17 | AI cites sources, refuses unauthorised requests, missing ≠ zero | – | Planned (§3) |
 | 18 | AI action previews can't run stale/duplicate/unauthorised writes | – | Planned (F-21, §3) |
-| 19 | EN/KN, mobile, accessibility, printing, offline | EN/KN and mobile browser-checked for new screens; printing and offline Planned | Partial |
+| 19 | EN/KN, mobile, accessibility, printing, offline | `npm run check:i18n` fails the build check if any screen text lacks English or Kannada; every new screen browser-checked on desktop and phone; receipts and payslips print. Accessibility audit and offline Planned | Partial |
 | 20 | Year rollover, migration, backup restore, exits keep history | Migration: `test/migration.test.js`. Rollover, backups, exits Planned | Partial |
 
 ## 3. AI capability matrix

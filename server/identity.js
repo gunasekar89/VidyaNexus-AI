@@ -22,6 +22,7 @@ import { addDays, isoDate } from './dates.js'
 import { HttpError, bad, forbidden, id, notFound, required, text, wrap } from './http.js'
 import { demoAccounts } from './seed.js'
 import { studentHomework, scopedAnnouncements, studentAwards, toResult, upcomingExams } from './student.js'
+import { opsDemoPeople } from './ops/seed.js'
 import { addEmployee, addMembership, demoIdentities } from './tenancy.js'
 import { codeAt, currentStep, newSecret, otpauthUri, verify as verifyTotp } from './totp.js'
 
@@ -137,6 +138,13 @@ identity.get('/auth/demo', (req, res) => {
     { key: 'trustee', ...demoIdentities.trustee },
     { key: 'accountantParent', ...demoIdentities.accountantParent },
     { key: 'hr', ...demoIdentities.hr },
+    ...Object.entries(opsDemoPeople).map(([key, p]) => ({
+      key,
+      email: p.email,
+      password: p.mfa ? demoIdentities.principal.password : demoIdentities.driver.password,
+      card: p.mfa ? 'admin' : 'staff',
+      employeeId: p.mfa ? undefined : p.employeeNo,
+    })),
   ]
   const accounts = list
     .filter((a) => !portal || a.card === portal || (a.key === 'accountantParent' && portal === 'family'))

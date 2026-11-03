@@ -1,4 +1,5 @@
-import { adminStrings } from './i18n-admin'
+import { adminStrings } from './i18n-admin.js'
+import { opsStrings } from './i18n-ops.js'
 
 // UI strings for the EN / ಕನ್ನಡ toggle.
 export const strings = {
@@ -477,3 +478,5 @@ export const strings = {
 // Sign-in, workspace and administration strings live in i18n-admin.js.
 Object.assign(strings.en, adminStrings.en)
 Object.assign(strings.kn, adminStrings.kn)
+Object.assign(strings.en, opsStrings.en)
+Object.assign(strings.kn, opsStrings.kn)
